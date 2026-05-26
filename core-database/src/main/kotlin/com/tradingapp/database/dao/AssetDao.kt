@@ -40,6 +40,8 @@ interface AssetDao {
             price          = :price,
             change_24h     = :change24h,
             change_pct_24h = :changePct24h,
+            high_24h       = :high24h,
+            low_24h        = :low24h,
             market_cap     = :marketCap,
             volume_24h     = :volume24h,
             logo_url       = :logoUrl
@@ -52,6 +54,8 @@ interface AssetDao {
         price: Double,
         change24h: Double,
         changePct24h: Double,
+        high24h: Double,
+        low24h: Double,
         marketCap: Double,
         volume24h: Double,
         logoUrl: String?,

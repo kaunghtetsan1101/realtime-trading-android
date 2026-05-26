@@ -99,6 +99,8 @@ class AssetRepositoryImpl @Inject constructor(
                     price        = e.price,
                     change24h    = e.change24h,
                     changePct24h = e.changePct24h,
+                    high24h      = e.high24h,
+                    low24h       = e.low24h,
                     marketCap    = e.marketCap,
                     volume24h    = e.volume24h,
                     logoUrl      = e.logoUrl,

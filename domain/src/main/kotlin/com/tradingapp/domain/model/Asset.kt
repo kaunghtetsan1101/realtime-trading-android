@@ -11,6 +11,8 @@ data class Asset(
     val currentPrice: Double,
     val priceChange24h: Double,
     val priceChangePct24h: Double,
+    val high24h: Double = 0.0,
+    val low24h: Double = 0.0,
     val marketCap: Double,
     val volume24h: Double,
     val logoUrl: String?,

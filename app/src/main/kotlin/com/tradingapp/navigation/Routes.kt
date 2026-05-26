@@ -1,10 +1,23 @@
 package com.tradingapp.navigation
 
-sealed class Routes(val route: String) {
-    data object Watchlist     : Routes("watchlist")
-    data object MarketDetail  : Routes("market_detail/{symbol}") {
-        fun createRoute(symbol: String) = "market_detail/$symbol"
-    }
-    data object Search        : Routes("search")
-    data object Settings      : Routes("settings")
-}
+import kotlinx.serialization.Serializable
+
+/**
+ * Navigation 3 route keys.
+ *
+ * Each key is a serializable value/data class so the back stack can survive
+ * process death. Data passed to a destination (e.g. [symbol]) lives directly
+ * on the key — no string route templates or SavedStateHandle look-ups needed.
+ */
+
+@Serializable
+data object RouteWatchlist
+
+@Serializable
+data class RouteMarketDetail(val symbol: String)
+
+@Serializable
+data object RouteSearch
+
+@Serializable
+data object RouteSettings

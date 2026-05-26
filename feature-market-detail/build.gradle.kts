@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.tradingapp.watchlist"
+    namespace = "com.tradingapp.marketdetail"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {

@@ -24,6 +24,8 @@ fun BinanceTicker24hrDto.toEntity(): AssetEntity {
         price        = lastPrice.toDoubleOrNull() ?: 0.0,
         change24h    = priceChange.toDoubleOrNull() ?: 0.0,
         changePct24h = priceChangePercent.toDoubleOrNull() ?: 0.0,
+        high24h      = highPrice.toDoubleOrNull() ?: 0.0,
+        low24h       = lowPrice.toDoubleOrNull() ?: 0.0,
         // Binance public API has no market cap; use quoteVolume as a proxy
         marketCap    = quoteVolume.toDoubleOrNull() ?: 0.0,
         volume24h    = volume.toDoubleOrNull() ?: 0.0,
@@ -39,6 +41,8 @@ fun AssetEntity.toDomain(): Asset = Asset(
     currentPrice      = price,
     priceChange24h    = change24h,
     priceChangePct24h = changePct24h,
+    high24h           = high24h,
+    low24h            = low24h,
     marketCap         = marketCap,
     volume24h         = volume24h,
     logoUrl           = logoUrl,

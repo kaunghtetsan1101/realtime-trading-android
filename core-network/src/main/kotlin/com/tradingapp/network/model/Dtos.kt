@@ -14,6 +14,8 @@ data class BinanceTicker24hrDto(
     @SerializedName("lastPrice")          val lastPrice: String,
     @SerializedName("priceChange")        val priceChange: String,
     @SerializedName("priceChangePercent") val priceChangePercent: String,
+    @SerializedName("highPrice")          val highPrice: String,
+    @SerializedName("lowPrice")           val lowPrice: String,
     @SerializedName("volume")             val volume: String,
     @SerializedName("quoteVolume")        val quoteVolume: String,
 )

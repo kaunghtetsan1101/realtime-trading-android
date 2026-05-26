@@ -13,8 +13,8 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 | M2 — Core Infrastructure | ✅ Done |
 | M3 — Domain Layer | ✅ Done |
 | M4 — Data Layer | ✅ Done |
-| M5 — Watchlist Feature (MVP core) | 🔄 In Progress |
-| M6 — Asset Detail | Pending |
+| M5 — Watchlist Feature (MVP core) | ✅ Done |
+| M6 — Asset Detail | ✅ Done |
 | M7 — Design System + Dark Mode | Pending |
 | M8 — Search | Pending |
 | M9 — Trading Screen | Pending |
@@ -53,7 +53,8 @@ realtime-trading-android/
 ├── domain/                 # Models, repository interfaces, use cases (pure Kotlin)
 ├── data/                   # Repository implementations, mappers, Hilt bindings
 │
-└── feature-watchlist/      # Watchlist screen — MVI ViewModel, UI, contract, tests
+├── feature-watchlist/      # Watchlist screen — MVI ViewModel, UI, contract, tests
+└── feature-market-detail/  # Asset detail screen — TradingView chart, live price ticker
 ```
 
 ### Dependency Rules
@@ -106,6 +107,8 @@ AssetRepositoryImpl
        │
        ▼
 GetWatchlistUseCase ──► observeAssets() ──► Room emits ──► UI re-renders
+
+observePriceTicks(symbol) ──► MarketDetailViewModel.recentPrices ──► price ticker
 ```
 
 ---
@@ -131,9 +134,10 @@ cd realtime-trading-android
 
 ### Run tests
 ```bash
-./gradlew test                         # Unit tests (all modules)
-./gradlew :feature-watchlist:test      # Watchlist tests only
-./gradlew connectedAndroidTest         # Instrumented tests (requires emulator)
+./gradlew test                              # Unit tests (all modules)
+./gradlew :feature-watchlist:test           # Watchlist tests only
+./gradlew :feature-market-detail:test       # Market detail tests only
+./gradlew connectedAndroidTest              # Instrumented tests (requires emulator)
 ```
 
 ---

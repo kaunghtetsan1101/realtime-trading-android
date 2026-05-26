@@ -22,7 +22,9 @@ object DatabaseModule {
             context,
             TradingDatabase::class.java,
             "trading.db",
-        ).build()
+        )
+            .addMigrations(TradingDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     fun provideAssetDao(db: TradingDatabase): AssetDao = db.assetDao()

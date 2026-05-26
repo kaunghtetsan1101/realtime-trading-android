@@ -5,6 +5,9 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.10.0"
+}
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -25,8 +28,9 @@ include(":domain")
 include(":data")
 include(":feature-watchlist")
 
+include(":feature-market-detail")
+
 // Future modules — uncomment when ready:
 // include(":core-designsystem")
-// include(":feature-market-detail")
 // include(":feature-search")
 // include(":feature-settings")

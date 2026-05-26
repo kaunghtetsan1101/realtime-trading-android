@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
 }
@@ -27,12 +27,9 @@ android {
 
     buildFeatures { compose = true }
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions { jvmTarget = "17" }
 }
+
+kotlin { jvmToolchain(17) }
 
 dependencies {
     implementation(project(":core-common"))
@@ -42,6 +39,7 @@ dependencies {
     implementation(project(":domain"))
     implementation(project(":data"))
     implementation(project(":feature-watchlist"))
+    implementation(project(":feature-market-detail"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -53,10 +51,13 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
 
-    implementation(libs.navigation.compose)
+    implementation(libs.navigation3.runtime)
+    implementation(libs.navigation3.ui)
+    implementation(libs.lifecycle.viewmodel.nav3)
+    implementation(libs.hilt.lifecycle.viewmodel.compose)
+    implementation(libs.kotlinx.serialization.core)
 
     implementation(libs.hilt.android)
-    implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 
     debugImplementation(libs.compose.ui.tooling)
