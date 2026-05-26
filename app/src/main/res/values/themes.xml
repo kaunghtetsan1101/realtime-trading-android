@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window background drawn before Compose takes over. NoTitleBar keeps
+         the system window without an action bar; Compose handles all theming. -->
+    <style name="Theme.Trading" parent="android:Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>
