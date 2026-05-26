@@ -17,9 +17,9 @@ data class WatchlistState(
 )
 
 sealed interface WatchlistEvent {
-    data object Refresh                                       : WatchlistEvent
+    data object Refresh : WatchlistEvent
     data class  ToggleFavorite(val symbol: String, val isFav: Boolean) : WatchlistEvent
-    data class  AssetClicked(val symbol: String)              : WatchlistEvent
+    data class  AssetClicked(val symbol: String) : WatchlistEvent
 }
 
 sealed interface WatchlistEffect {
