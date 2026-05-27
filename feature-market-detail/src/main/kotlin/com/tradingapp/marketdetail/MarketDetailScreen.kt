@@ -191,10 +191,14 @@ private fun StatRow(label: String, value: String) {
     }
 }
 
+private const val BILLION = 1_000_000_000.0
+private const val MILLION = 1_000_000.0
+private const val THOUSAND = 1_000.0
+
 private fun formatLargeNumber(value: Double): String = when {
-    value >= 1_000_000_000.0 -> "${"%.2f".format(value / 1_000_000_000.0)}B"
-    value >= 1_000_000.0 -> "${"%.2f".format(value / 1_000_000.0)}M"
-    value >= 1_000.0 -> "${"%.2f".format(value / 1_000.0)}K"
+    value >= BILLION -> "${"%.2f".format(value / BILLION)}B"
+    value >= MILLION -> "${"%.2f".format(value / MILLION)}M"
+    value >= THOUSAND -> "${"%.2f".format(value / THOUSAND)}K"
     else -> "%.2f".format(value)
 }
 

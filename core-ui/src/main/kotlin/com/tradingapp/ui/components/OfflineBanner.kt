@@ -57,11 +57,13 @@ fun OfflineBanner(isOffline: Boolean, lastUpdatedMs: Long?, modifier: Modifier =
     }
 }
 
+private const val ONE_MINUTE_MS = 60_000L
+
 private fun formatAge(lastUpdatedMs: Long?): String {
     if (lastUpdatedMs == null || lastUpdatedMs == 0L) return "unknown"
     val ageMs = System.currentTimeMillis() - lastUpdatedMs
     return when {
-        ageMs < 60_000L -> "just now"
-        else -> "${ageMs / 60_000L} min ago"
+        ageMs < ONE_MINUTE_MS -> "just now"
+        else -> "${ageMs / ONE_MINUTE_MS} min ago"
     }
 }

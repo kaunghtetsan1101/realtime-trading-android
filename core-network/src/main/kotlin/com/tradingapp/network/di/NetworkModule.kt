@@ -21,6 +21,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
     private const val BINANCE_BASE_URL = "https://api.binance.com/"
+    private const val CONNECT_TIMEOUT_SECONDS = 30L
 
     @Provides
     @Singleton
@@ -36,7 +37,7 @@ object NetworkModule {
     fun provideOkHttpClient(loggingInterceptor: HttpLoggingInterceptor): OkHttpClient = OkHttpClient
         .Builder()
         .addInterceptor(loggingInterceptor)
-        .connectTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         // 0 = infinite read timeout — required to keep the WebSocket alive
         .readTimeout(0, TimeUnit.SECONDS)
         .build()

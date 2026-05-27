@@ -13,7 +13,7 @@ complexity:
     constructorThreshold: 8
     ignoreDefaultParameters: true
     ignoreDataClasses: true
-    ignoreAnnotated: ['Composable']
+    ignoreAnnotated: ['Composable', 'Query']  # Room @Query DAO functions map 1:1 to SQL params
   CyclomaticComplexMethod:
     threshold: 15
     ignoreSingleWhenExpression: true # when() in MVI onEvent is fine
@@ -44,7 +44,12 @@ style:
     ignoreNamedArgument: true        # e.g. Modifier.padding(16.dp) is self-documenting
     ignoreEnums: true
     ignoreExtensionFunctions: true
+    ignoreAnnotated: ['Composable', 'Preview']  # dp/sp values in Compose are self-documenting
     excludes: ['**/test/**', '**/androidTest/**']
+  UnusedPrivateMember:
+    ignoreAnnotated: ['Preview']     # @Preview functions are rendered by Android Studio, not called in code
+  DestructuringDeclarationWithTooManyEntries:
+    maxDestructuringEntries: 4       # SearchViewModel combine() produces 4 values: result, query, filter, sort
   MaxLineLength:
     maxLineLength: 120
     excludePackageStatements: true
@@ -54,7 +59,7 @@ style:
     excludeGuardClauses: true
   ForbiddenComment:
     active: true
-    values:
+    comments:
       - reason: 'Must be resolved before merging'
         value: 'FIXME:'
       - reason: 'Must be resolved before merging'

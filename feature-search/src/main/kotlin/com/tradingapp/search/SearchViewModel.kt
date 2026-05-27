@@ -52,7 +52,7 @@ class SearchViewModel @Inject constructor(
         // (they are discrete tap actions — debounce adds latency with no benefit).
         combine(
             getWatchlist(),
-            queryMutable.debounce(300).distinctUntilChanged(),
+            queryMutable.debounce(QUERY_DEBOUNCE_MS).distinctUntilChanged(),
             filterInputMutable,
             sortInputMutable,
         ) { result, query, filter, sort ->
@@ -103,6 +103,10 @@ class SearchViewModel @Inject constructor(
 
     private fun sendEffect(effect: SearchEffect) {
         viewModelScope.launch { effectsMutable.send(effect) }
+    }
+
+    companion object {
+        private const val QUERY_DEBOUNCE_MS = 300L
     }
 }
 

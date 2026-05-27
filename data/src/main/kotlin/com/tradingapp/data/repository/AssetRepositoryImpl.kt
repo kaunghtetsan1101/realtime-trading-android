@@ -90,8 +90,8 @@ class AssetRepositoryImpl @Inject constructor(
                     webSocketManager.observePriceTicks(url)
                         .retryWhen { _, attempt ->
                             val backoffMs = min(
-                                (1L shl attempt.toInt().coerceAtMost(14)) * 2_000L,
-                                30_000L,
+                                (1L shl attempt.toInt().coerceAtMost(WS_BACKOFF_MAX_SHIFT)) * WS_BACKOFF_BASE_MS,
+                                WS_BACKOFF_MAX_MS,
                             )
                             delay(backoffMs)
                             true
@@ -186,5 +186,14 @@ class AssetRepositoryImpl @Inject constructor(
             "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT",
             "ADAUSDT", "DOGEUSDT", "AVAXUSDT", "DOTUSDT", "MATICUSDT",
         )
+
+        /** Exponential backoff: base delay before each WS reconnect attempt. */
+        private const val WS_BACKOFF_BASE_MS = 2_000L
+
+        /** Exponential backoff: maximum delay cap for WS reconnect. */
+        private const val WS_BACKOFF_MAX_MS = 30_000L
+
+        /** Exponential backoff: bit-shift cap so delay never overflows Long. */
+        private const val WS_BACKOFF_MAX_SHIFT = 14
     }
 }
