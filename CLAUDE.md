@@ -1,7 +1,3 @@
----
-name: realtime-trading-android
-description: "Build and iterate on a native Android realtime trading or market watch app portfolio project. Use when the user asks Claude or ChatGPT to plan, create, implement, review, test, document, or improve Project 1 Realtime Trading Market Watch App using Kotlin, Jetpack Compose, Material3, MVI/MVVM, Clean Architecture, multi-module Gradle, Coroutines, Flow, StateFlow, SharedFlow, Hilt/Dagger, Room, Retrofit/OkHttp, WebSocket, testing, QA checklists, README documentation, GitHub portfolio polish, or AI-assisted/vibe coding workflows for a Senior Android Engineer profile."
----
 
 # Realtime Trading Android Skill
 
