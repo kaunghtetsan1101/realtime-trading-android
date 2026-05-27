@@ -1,7 +1,7 @@
 package com.tradingapp
 
 import android.app.Application
-import com.squareup.leakcanary.core.BuildConfig
+import com.tradingapp.BuildConfig
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 

@@ -36,7 +36,7 @@ naming:
 
 style:
   MagicNumber:
-    ignoreNumbers: ['-1', '0', '1', '2', '100', '1000']
+    ignoreNumbers: ['-1', '0', '1', '2', '17', '100', '1000']
     ignorePropertyDeclaration: true
     ignoreConstantDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
@@ -45,7 +45,7 @@ style:
     ignoreEnums: true
     ignoreExtensionFunctions: true
     ignoreAnnotated: ['Composable', 'Preview']  # dp/sp values in Compose are self-documenting
-    excludes: ['**/test/**', '**/androidTest/**']
+    excludes: ['**/test/**', '**/androidTest/**', '**/baseline-profile/**', '**/macrobenchmark/**', '**/build-logic/**']
   UnusedPrivateMember:
     ignoreAnnotated: ['Preview']     # @Preview functions are rendered by Android Studio, not called in code
   DestructuringDeclarationWithTooManyEntries:

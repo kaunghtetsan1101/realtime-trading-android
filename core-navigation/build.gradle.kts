@@ -1,54 +1,29 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.compose)
+    id("tradingapp.android.library.compose")
+    id("tradingapp.android.hilt")
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.hilt)
-    alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "com.tradingapp.navigation"
-    compileSdk =
-        libs.versions.compileSdk
-            .get()
-            .toInt()
-
-    defaultConfig {
-        minSdk =
-            libs.versions.minSdk
-                .get()
-                .toInt()
-    }
-
-    buildFeatures { compose = true }
 }
 
-kotlin { jvmToolchain(17) }
-
 dependencies {
-    // Feature screens wired by this nav graph
     implementation(project(":feature-watchlist"))
     implementation(project(":feature-market-detail"))
     implementation(project(":feature-search"))
 
-    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.findLibrary("androidx-lifecycle-runtime-ktx").get())
 
-    // Compose runtime (needed for @Composable + mutableStateListOf)
-    implementation(platform(libs.compose.bom))
-    implementation(libs.compose.ui)
+    implementation(platform(libs.findLibrary("compose-bom").get()))
+    implementation(libs.findLibrary("compose-ui").get())
 
-    // Navigation 3
-    implementation(libs.navigation3.runtime)
-    implementation(libs.navigation3.ui)
-    implementation(libs.lifecycle.viewmodel.nav3)
-    implementation(libs.hilt.lifecycle.viewmodel.compose)
+    implementation(libs.findLibrary("navigation3-runtime").get())
+    implementation(libs.findLibrary("navigation3-ui").get())
+    implementation(libs.findLibrary("lifecycle-viewmodel-nav3").get())
+    implementation(libs.findLibrary("hilt-lifecycle-viewmodel-compose").get())
 
-    // Route serialization
-    implementation(libs.kotlinx.serialization.core)
+    implementation(libs.findLibrary("kotlinx-serialization-core").get())
 
-    // Hilt
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-
-    debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(libs.findLibrary("compose-ui-tooling").get())
 }

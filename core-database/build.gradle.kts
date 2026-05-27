@@ -1,39 +1,20 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.hilt)
-    alias(libs.plugins.ksp)
+    id("tradingapp.android.library")
+    id("tradingapp.android.hilt")
 }
 
 android {
     namespace = "com.tradingapp.database"
-    compileSdk =
-        libs.versions.compileSdk
-            .get()
-            .toInt()
-
-    defaultConfig {
-        minSdk =
-            libs.versions.minSdk
-                .get()
-                .toInt()
-    }
 }
-
-kotlin { jvmToolchain(17) }
 
 dependencies {
     implementation(project(":core-common"))
+    implementation(libs.findLibrary("room-runtime").get())
+    implementation(libs.findLibrary("room-ktx").get())
+    ksp(libs.findLibrary("room-compiler").get())
+    implementation(libs.findLibrary("coroutines-core").get())
 
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
-
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-
-    implementation(libs.coroutines.core)
-
-    testImplementation(libs.junit)
-    testImplementation(libs.coroutines.test)
-    testImplementation(libs.turbine)
+    testImplementation(libs.findLibrary("junit4").get())
+    testImplementation(libs.findLibrary("coroutines-test").get())
+    testImplementation(libs.findLibrary("turbine").get())
 }

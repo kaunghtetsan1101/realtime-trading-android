@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google()
         mavenCentral()
@@ -30,6 +31,8 @@ include(":data")
 include(":feature-watchlist")
 include(":feature-market-detail")
 include(":feature-search")
+include(":baseline-profile")
+include(":macrobenchmark")
 
 // Future modules — uncomment when ready:
 // include(":core-designsystem")

@@ -1,43 +1,24 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.hilt)
-    alias(libs.plugins.ksp)
+    id("tradingapp.android.library")
+    id("tradingapp.android.hilt")
 }
 
 android {
     namespace = "com.tradingapp.network"
-    compileSdk =
-        libs.versions.compileSdk
-            .get()
-            .toInt()
-
-    defaultConfig {
-        minSdk =
-            libs.versions.minSdk
-                .get()
-                .toInt()
-    }
 }
-
-kotlin { jvmToolchain(17) }
 
 dependencies {
     implementation(project(":core-common"))
+    implementation(libs.findLibrary("retrofit").get())
+    implementation(libs.findLibrary("retrofit-gson").get())
+    implementation(libs.findLibrary("okhttp").get())
+    implementation(libs.findLibrary("okhttp-logging").get())
+    implementation(libs.findLibrary("coroutines-core").get())
+    implementation(libs.findLibrary("timber").get())
 
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.gson)
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
-    implementation(libs.coroutines.core)
-
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-
-    implementation(libs.timber)
-
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.coroutines.test)
-    testImplementation(libs.turbine)
-    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.findLibrary("junit4").get())
+    testImplementation(libs.findLibrary("mockk").get())
+    testImplementation(libs.findLibrary("coroutines-test").get())
+    testImplementation(libs.findLibrary("turbine").get())
+    testImplementation(libs.findLibrary("okhttp-mockwebserver").get())
 }

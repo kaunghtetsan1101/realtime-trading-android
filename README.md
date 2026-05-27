@@ -1,6 +1,5 @@
 # Realtime Trading Android Portfolio App
 
-[![CI](https://github.com/<your-username>/realtime-trading-android/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-username>/realtime-trading-android/actions/workflows/ci.yml)
 
 A production-style Native Android app for realtime market watching and trading simulation.
 Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
@@ -34,7 +33,7 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 | Logging | Timber |
 | Static analysis | detekt |
 | Formatting | Spotless + ktlint |
-| Build | Gradle multi-module + Version Catalog |
+| Build | Gradle multi-module + Convention Plugins + Version Catalog |
 | Testing | JUnit + MockK + Turbine + MockWebServer |
 | Debug | LeakCanary |
 | CI | GitHub Actions |
@@ -43,6 +42,8 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 
 ```
 realtime-trading-android/
+│
+├── build-logic/            # Gradle convention plugins — eliminates duplicated build config
 │
 ├── app/                    # Entry point: TradingApp (@HiltAndroidApp), MainActivity, DI bootstrap
 ├── core-navigation/        # AppNavGraph, Routes, NavigationViewModel — wires all feature screens
@@ -57,7 +58,10 @@ realtime-trading-android/
 │
 ├── feature-watchlist/      # Watchlist screen — MVI ViewModel, UI, contract, tests
 ├── feature-market-detail/  # Asset detail screen — live price ticker, 24h stats
-└── feature-search/         # Search screen — in-memory filter/sort, debounced query, MVI
+├── feature-search/         # Search screen — in-memory filter/sort, debounced query, MVI
+│
+├── baseline-profile/       # Generates Baseline Profile (startup + watchlist scroll)
+└── macrobenchmark/         # Macrobenchmarks: cold startup and watchlist frame timing
 ```
 
 ### Dependency Rules
@@ -73,6 +77,8 @@ core-ui        ──► core-common
 ```
 
 ## Architecture
+
+> Full reference: [docs/architecture.md](docs/architecture.md)
 
 The app follows Clean Architecture with three layers per feature:
 
@@ -118,6 +124,32 @@ GetWatchlistUseCase ──► observeAssets() ──► Room emits ──► UI 
 
 observePriceTicks(symbol) ──► MarketDetailViewModel.recentPrices ──► price ticker
 ```
+
+## Performance
+
+### Baseline Profiles
+A Baseline Profile pre-compiles hot code paths (startup and watchlist scroll) at install
+time via ART's profile-guided optimisation. This reduces cold-start latency and first-scroll
+jank without any runtime overhead.
+
+```bash
+# Requires a connected device or emulator (API 28+)
+./gradlew :baseline-profile:generateBaselineProfile
+```
+
+### Macrobenchmarks
+Two macrobenchmarks compare `CompilationMode.None()` (JIT only) vs `CompilationMode.Partial()`
+(with Baseline Profile) across cold startup and watchlist scrolling:
+
+```bash
+# Requires a connected device (API 29+, non-emulator recommended for accurate results)
+./gradlew :macrobenchmark:connectedBenchmarkAndroidTest
+```
+
+| Benchmark | Metric |
+|-----------|--------|
+| `StartupBenchmark` | Cold start time (ms) |
+| `WatchlistScrollBenchmark` | Frame duration P50/P90/P99 (ms) |
 
 ## Setup
 
@@ -233,7 +265,8 @@ significantly faster than cold builds.
 | WS stream limit | Top 50 of 100 tracked assets | Binance combined-stream cap; ranks 51-100 show last-synced price |
 | Dynamic WS reconnect | `MutableStateFlow<String?> + flatMapLatest` | URL changes after sync automatically cancel old WS and open new one |
 | Navigation extraction | `core-navigation` module | Feature modules have zero knowledge of routes; `app` only depends on `core-navigation` |
-| detekt at root | Single task scans all modules | Simpler than per-module config without convention plugins; one CI command |
+| Convention plugins | `build-logic` composite build | ~150 lines of duplicated Gradle config replaced with 6 composable plugins; same approach as Now in Android |
+| detekt at root | Single task scans all modules | Simpler than per-module config; one CI command covers all modules |
 | No detekt-formatting | Spotless handles formatting | Avoids duplicate ktlint execution and conflicting rule sets |
 | Timber debug-only | `if (BuildConfig.DEBUG)` guard | Release APK has zero logging cost; no stripping step needed |
 | LeakCanary debug-only | `debugImplementation` | Auto-excluded from release; no ProGuard rules required |
