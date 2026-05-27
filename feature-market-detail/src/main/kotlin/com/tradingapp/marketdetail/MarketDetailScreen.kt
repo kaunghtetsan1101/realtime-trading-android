@@ -1,5 +1,6 @@
 package com.tradingapp.marketdetail
 
+import android.content.res.Configuration
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,12 +32,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tradingapp.designsystem.Spacing
 import com.tradingapp.domain.model.Asset
 import com.tradingapp.ui.components.ErrorState
 import com.tradingapp.ui.components.LoadingIndicator
 import com.tradingapp.ui.components.OfflineBanner
-import com.tradingapp.ui.theme.PriceDown
-import com.tradingapp.ui.theme.PriceUp
+import com.tradingapp.ui.components.PercentageBadge
+import com.tradingapp.ui.components.PriceText
+import com.tradingapp.ui.components.SectionHeader
 import com.tradingapp.ui.theme.TradingAppTheme
 
 // viewModel is supplied by AppNavGraph via hiltViewModel(creationCallback = ...) — not a default param
@@ -74,7 +77,7 @@ private fun MarketDetailContent(state: MarketDetailState, onEvent: (MarketDetail
                     IconButton(onClick = { onEvent(MarketDetailEvent.NavigateBack) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = "Navigate back",
                         )
                     }
                 },
@@ -101,9 +104,6 @@ private fun MarketDetailContent(state: MarketDetailState, onEvent: (MarketDetail
 @Composable
 private fun DetailBody(asset: Asset, isOffline: Boolean, modifier: Modifier = Modifier) {
     val darkTheme = isSystemInDarkTheme()
-    val priceColor = if (asset.isUp) PriceUp else PriceDown
-    val pctSign = if (asset.isUp) "+" else ""
-    val pctLabel = "$pctSign${"%.2f".format(asset.priceChangePct24h)}%"
 
     Column(
         modifier = modifier
@@ -116,17 +116,16 @@ private fun DetailBody(asset: Asset, isOffline: Boolean, modifier: Modifier = Mo
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         ) {
-            Text(
-                text = "%.2f".format(asset.currentPrice),
+            PriceText(
+                price = asset.currentPrice,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )
-            Text(
-                text = pctLabel,
-                style = MaterialTheme.typography.titleMedium,
-                color = priceColor,
+            PercentageBadge(
+                changePercent = asset.priceChangePct24h,
+                textStyle = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
         }
@@ -145,9 +144,9 @@ private fun DetailBody(asset: Asset, isOffline: Boolean, modifier: Modifier = Mo
             lastUpdatedMs = asset.lastUpdated,
         )
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
 
-        // --- Stats grid ---
+        // --- Stats section ---
         StatsSection(asset = asset)
     }
 }
@@ -157,16 +156,12 @@ private fun StatsSection(asset: Asset) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Text(
-            text = "Stats",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-        )
-        StatRow(label = "24h High", value = "${"%.2f".format(asset.high24h)}")
-        StatRow(label = "24h Low", value = "${"%.2f".format(asset.low24h)}")
+        SectionHeader(title = "Stats")
+        StatRow(label = "24h High", value = "%.2f".format(asset.high24h))
+        StatRow(label = "24h Low", value = "%.2f".format(asset.low24h))
         StatRow(label = "Volume", value = formatLargeNumber(asset.volume24h))
         StatRow(label = "Mkt Cap", value = formatLargeNumber(asset.marketCap))
     }
@@ -181,7 +176,7 @@ private fun StatRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
             text = value,
@@ -204,22 +199,24 @@ private fun formatLargeNumber(value: Double): String = when {
 
 // --- Previews ---
 
-private fun fakeAsset() = Asset(
-    symbol = "BTC",
-    name = "Bitcoin",
-    currentPrice = 67_500.0,
-    priceChange24h = 1_575.0,
-    priceChangePct24h = 2.34,
-    high24h = 68_200.0,
-    low24h = 66_100.0,
-    marketCap = 1_320_000_000_000.0,
-    volume24h = 28_500_000_000.0,
-    logoUrl = null,
-    isFavorite = false,
-    lastUpdated = System.currentTimeMillis(),
-)
+private fun fakeAsset() =
+    Asset(
+        symbol = "BTC",
+        name = "Bitcoin",
+        currentPrice = 67_500.0,
+        priceChange24h = 1_575.0,
+        priceChangePct24h = 2.34,
+        high24h = 68_200.0,
+        low24h = 66_100.0,
+        marketCap = 1_320_000_000_000.0,
+        volume24h = 28_500_000_000.0,
+        logoUrl = null,
+        isFavorite = false,
+        lastUpdated = System.currentTimeMillis(),
+    )
 
-@Preview(showBackground = true)
+@Preview(name = "Light", showBackground = true)
+@Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun DetailPreview() {
     TradingAppTheme {
@@ -230,7 +227,7 @@ private fun DetailPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Light — loading", showBackground = true)
 @Composable
 private fun DetailLoadingPreview() {
     TradingAppTheme {
@@ -238,7 +235,7 @@ private fun DetailLoadingPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Light — error", showBackground = true)
 @Composable
 private fun DetailErrorPreview() {
     TradingAppTheme {

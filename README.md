@@ -14,7 +14,7 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 | M4 ──► Data Layer | ✅ Done |
 | M5 ──► Watchlist Feature (MVP core) | ✅ Done |
 | M6 ──► Asset Detail | ✅ Done |
-| M7 ──► Design System + Dark Mode | Pending |
+| M7 ──► Design System + Dark Mode | ✅ Done |
 | M8 ──► Search | ✅ Done |
 | M9 ──► Trading Screen | Pending |
 | M10 ──► Settings + Polish | Pending |
@@ -56,6 +56,8 @@ realtime-trading-android/
 ├── domain/                 # Models, repository interfaces, use cases (pure Kotlin)
 ├── data/                   # Repository implementations, mappers, Hilt bindings
 │
+├── core-designsystem/      # Design tokens — Color, Typography, Spacing, Shape
+│
 ├── feature-watchlist/      # Watchlist screen — MVI ViewModel, UI, contract, tests
 ├── feature-market-detail/  # Asset detail screen — live price ticker, 24h stats
 ├── feature-search/         # Search screen — in-memory filter/sort, debounced query, MVI
@@ -73,7 +75,8 @@ core-navigation──► feature-watchlist, feature-market-detail, feature-searc
 feature-*      ──► domain, core-ui, core-common
 data           ──► domain, core-network, core-database, core-common
 domain         ──► core-common   (no Android imports)
-core-ui        ──► core-common
+core-ui        ──► core-designsystem (api — exposes tokens to all consumers)
+core-designsystem  (pure design tokens — Color, Typography, Spacing, Shape)
 ```
 
 ## Architecture
@@ -124,6 +127,44 @@ GetWatchlistUseCase ──► observeAssets() ──► Room emits ──► UI 
 
 observePriceTicks(symbol) ──► MarketDetailViewModel.recentPrices ──► price ticker
 ```
+
+## Design System
+
+The design system is split across two modules:
+
+**`core-designsystem`** — pure tokens with no composable logic:
+
+| File | Contents |
+|------|----------|
+| `Color.kt` | Raw palette (`Green500`, `Red500`), semantic tokens (`PriceUp`, `PriceDown`), Material3 `DarkColorScheme` / `LightColorScheme` |
+| `Typography.kt` | `TradingTypography` — 5 Material3 text styles (titleLarge → labelSmall) |
+| `Spacing.kt` | `Spacing` object — named scale: `xxs=2`, `xs=4`, `sm=8`, `md=12`, `lg=16`, `xl=24`, `xxl=32`, `xxxl=48` dp |
+| `Shape.kt` | `TradingShapes` — explicit corner radii for all 5 Material3 shape tiers |
+
+**`core-ui`** — reusable Compose components:
+
+| Component | Purpose |
+|-----------|---------|
+| `TradingAppTheme` | Root theme — wires color scheme, typography, and shapes into `MaterialTheme` |
+| `PriceText` | Neutral-colour price display; pair with `PercentageBadge` for direction |
+| `PercentageBadge` | Colour-coded `+2.34%` / `-1.12%` badge with trend icon; merges semantics for a11y |
+| `AssetRow` | Shared list row — symbol, name, price, % change, favourite toggle; used by Watchlist and Search |
+| `MarketCard` | Card-style tile for grid / carousel layouts (future use) |
+| `SectionHeader` | Section title with optional trailing action label |
+| `PrimaryActionButton` | Full-width 48 dp primary CTA button |
+| `LoadingIndicator` | Centred `CircularProgressIndicator` |
+| `ErrorState` | Error icon + message + optional Retry button |
+| `EmptyState` | Customisable icon + title + subtitle for no-results states |
+| `OfflineBanner` | Animated slide-in banner showing cache age when offline |
+
+**Dark mode** follows system preference via `isSystemInDarkTheme()` with no runtime toggle required.
+Every component has paired `@Preview` annotations for both light and dark to catch visual regressions in Android Studio.
+
+**Accessibility highlights:**
+- Icon-only buttons (`Favorite`, back, clear) carry explicit `contentDescription` values
+- Secondary text uses `onSurfaceVariant` (Material3 semantic token) instead of raw `alpha(0.6f)` to guarantee contrast compliance
+- `PercentageBadge` merges its icon + text into one semantics node so screen readers announce it as a single value
+- `PrimaryActionButton` enforces 48 dp minimum touch target height
 
 ## Performance
 
@@ -272,3 +313,6 @@ significantly faster than cold builds.
 | LeakCanary debug-only | `debugImplementation` | Auto-excluded from release; no ProGuard rules required |
 | Search filter location | ViewModel (not use case) | `AssetFilter`/`SortOrder` are UI concerns; no domain pollution |
 | Search debounce target | Query only | Filter/sort are discrete taps — debounce adds latency with no benefit |
+| Design token split | `core-designsystem` + `core-ui` | Tokens (Color, Spacing, Shape) in a Compose-only module; components in `core-ui` which re-exports tokens via `api` dep |
+| `AssetRow` extraction | `core-ui` shared component | Identical row existed in Watchlist and Search; single source of truth eliminates drift |
+| Secondary text colour | `onSurfaceVariant` token | Replaces raw `alpha(0.6f)` — guaranteed contrast in both themes without manual tuning |

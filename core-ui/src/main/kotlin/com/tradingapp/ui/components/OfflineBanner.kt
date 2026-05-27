@@ -1,5 +1,6 @@
 package com.tradingapp.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -17,7 +18,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
+import com.tradingapp.designsystem.Spacing
+import com.tradingapp.ui.theme.TradingAppTheme
 
 /**
  * Animated banner shown when the device is offline.
@@ -39,13 +42,13 @@ fun OfflineBanner(isOffline: Boolean, lastUpdatedMs: Long?, modifier: Modifier =
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
             ) {
                 Icon(
                     imageVector = Icons.Default.WifiOff,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(end = 8.dp),
+                    modifier = Modifier.padding(end = Spacing.sm),
                 )
                 Text(
                     text = "Cached · ${formatAge(lastUpdatedMs)}",
@@ -65,5 +68,15 @@ private fun formatAge(lastUpdatedMs: Long?): String {
     return when {
         ageMs < ONE_MINUTE_MS -> "just now"
         else -> "${ageMs / ONE_MINUTE_MS} min ago"
+    }
+}
+
+@Preview(name = "Light — offline", showBackground = true)
+@Preview(name = "Dark — offline", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun OfflineBannerPreview() {
+    TradingAppTheme {
+        // Simulate 5 min ago cache
+        OfflineBanner(isOffline = true, lastUpdatedMs = System.currentTimeMillis() - 5 * ONE_MINUTE_MS)
     }
 }

@@ -1,5 +1,6 @@
 package com.tradingapp.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.tradingapp.designsystem.Spacing
 import com.tradingapp.ui.theme.TradingAppTheme
 
 @Composable
@@ -28,7 +30,7 @@ fun ErrorState(message: String, onRetry: (() -> Unit)? = null, modifier: Modifie
         verticalArrangement = Arrangement.Center,
         modifier = modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(Spacing.xxl),
     ) {
         Icon(
             imageVector = Icons.Default.Warning,
@@ -36,7 +38,7 @@ fun ErrorState(message: String, onRetry: (() -> Unit)? = null, modifier: Modifie
             tint = MaterialTheme.colorScheme.error,
             modifier = Modifier.size(48.dp),
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(Spacing.lg))
         Text(
             text = message,
             style = MaterialTheme.typography.bodyLarge,
@@ -44,13 +46,14 @@ fun ErrorState(message: String, onRetry: (() -> Unit)? = null, modifier: Modifie
             color = MaterialTheme.colorScheme.onSurface,
         )
         if (onRetry != null) {
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Spacing.xl))
             Button(onClick = onRetry) { Text("Retry") }
         }
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Light", showBackground = true)
+@Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ErrorStatePreview() {
     TradingAppTheme {

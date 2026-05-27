@@ -34,6 +34,7 @@ include(":feature-search")
 include(":baseline-profile")
 include(":macrobenchmark")
 
+include(":core-designsystem")
+
 // Future modules — uncomment when ready:
-// include(":core-designsystem")
 // include(":feature-settings")
