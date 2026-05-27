@@ -13,9 +13,8 @@ import javax.inject.Inject
  * The [asResult] operator wraps emissions so the UI receives Loading → Success / Error
  * without knowing about exceptions.
  */
-class GetWatchlistUseCase @Inject constructor(
-    private val repository: AssetRepository,
-) {
-    operator fun invoke(): Flow<Result<List<Asset>>> =
-        repository.observeAssets().asResult()
+class GetWatchlistUseCase
+@Inject
+constructor(private val repository: AssetRepository) {
+    operator fun invoke(): Flow<Result<List<Asset>>> = repository.observeAssets().asResult()
 }

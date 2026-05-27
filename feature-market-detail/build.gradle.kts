@@ -7,14 +7,19 @@ plugins {
 
 android {
     namespace = "com.tradingapp.marketdetail"
-    compileSdk = libs.versions.compileSdk.get().toInt()
+    compileSdk =
+        libs.versions.compileSdk
+            .get()
+            .toInt()
 
     defaultConfig {
-        minSdk = libs.versions.minSdk.get().toInt()
+        minSdk =
+            libs.versions.minSdk
+                .get()
+                .toInt()
     }
 
     buildFeatures { compose = true }
-
 }
 
 kotlin { jvmToolchain(17) }
@@ -39,6 +44,7 @@ dependencies {
 
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+    implementation(libs.timber)
 
     debugImplementation(libs.compose.ui.tooling)
 

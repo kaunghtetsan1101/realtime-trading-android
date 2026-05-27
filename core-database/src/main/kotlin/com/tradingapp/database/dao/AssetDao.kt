@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AssetDao {
-
     /** Observe all assets ordered by market cap descending. */
     @Query("SELECT * FROM assets ORDER BY market_cap DESC")
     fun observeAll(): Flow<List<AssetEntity>>
@@ -46,7 +45,7 @@ interface AssetDao {
             volume_24h     = :volume24h,
             logo_url       = :logoUrl
         WHERE symbol = :symbol
-        """
+        """,
     )
     suspend fun updateMarketData(
         symbol: String,
@@ -68,7 +67,7 @@ interface AssetDao {
         SET price        = :price,
             last_updated = :timestamp
         WHERE symbol     = :symbol
-        """
+        """,
     )
     suspend fun updatePrice(symbol: String, price: Double, timestamp: Long)
 
@@ -77,4 +76,11 @@ interface AssetDao {
 
     @Query("SELECT COUNT(*) FROM assets")
     suspend fun count(): Int
+
+    /**
+     * Returns the bare symbols (e.g. "BTC") of the top [limit] assets ordered by market cap.
+     * Used on startup to rebuild the WebSocket subscription URL from cached DB data.
+     */
+    @Query("SELECT symbol FROM assets ORDER BY market_cap DESC LIMIT :limit")
+    suspend fun getTopSymbols(limit: Int): List<String>
 }

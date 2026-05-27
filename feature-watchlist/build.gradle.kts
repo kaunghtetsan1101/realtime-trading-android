@@ -7,14 +7,19 @@ plugins {
 
 android {
     namespace = "com.tradingapp.watchlist"
-    compileSdk = libs.versions.compileSdk.get().toInt()
+    compileSdk =
+        libs.versions.compileSdk
+            .get()
+            .toInt()
 
     defaultConfig {
-        minSdk = libs.versions.minSdk.get().toInt()
+        minSdk =
+            libs.versions.minSdk
+                .get()
+                .toInt()
     }
 
     buildFeatures { compose = true }
-
 }
 
 kotlin { jvmToolchain(17) }
@@ -38,6 +43,7 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(libs.coroutines.core)
+    implementation(libs.timber)
     implementation(libs.coroutines.android)
 
     debugImplementation(libs.compose.ui.tooling)

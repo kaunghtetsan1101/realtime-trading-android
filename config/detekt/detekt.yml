@@ -1,0 +1,61 @@
+# detekt configuration — only overrides; buildUponDefaultConfig = true in build.gradle.kts
+# Full rule reference: https://detekt.dev/docs/rules/comments
+
+build:
+  maxIssues: 0
+
+complexity:
+  LongMethod:
+    threshold: 60                    # Composable functions are naturally longer than 30 lines
+    ignoreAnnotated: ['Composable', 'Preview']
+  LongParameterList:
+    functionThreshold: 8             # Composables may have many parameters
+    constructorThreshold: 8
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+    ignoreAnnotated: ['Composable']
+  CyclomaticComplexMethod:
+    threshold: 15
+    ignoreSingleWhenExpression: true # when() in MVI onEvent is fine
+  TooManyFunctions:
+    thresholdInClasses: 15           # ViewModels + sealed interfaces
+    ignorePrivate: true
+    ignoreOverridden: true
+
+coroutines:
+  InjectDispatcher:
+    active: false                    # Project uses DispatcherProvider interface instead
+
+naming:
+  FunctionNaming:
+    # Allow PascalCase — required for @Composable functions
+    functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ignoreAnnotated: ['Composable']
+  MatchingDeclarationName:
+    active: false                    # Compose files have multiple top-level declarations
+
+style:
+  MagicNumber:
+    ignoreNumbers: ['-1', '0', '1', '2', '100', '1000']
+    ignorePropertyDeclaration: true
+    ignoreConstantDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreNamedArgument: true        # e.g. Modifier.padding(16.dp) is self-documenting
+    ignoreEnums: true
+    ignoreExtensionFunctions: true
+    excludes: ['**/test/**', '**/androidTest/**']
+  MaxLineLength:
+    maxLineLength: 120
+    excludePackageStatements: true
+    excludeImportStatements: true
+  ReturnCount:
+    max: 4                           # MVI onEvent handlers use multiple early returns
+    excludeGuardClauses: true
+  ForbiddenComment:
+    active: true
+    values:
+      - reason: 'Must be resolved before merging'
+        value: 'FIXME:'
+      - reason: 'Must be resolved before merging'
+        value: 'STOPSHIP:'

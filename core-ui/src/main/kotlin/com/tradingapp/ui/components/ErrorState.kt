@@ -22,11 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.tradingapp.ui.theme.TradingAppTheme
 
 @Composable
-fun ErrorState(
-    message: String,
-    onRetry: (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
-) {
+fun ErrorState(message: String, onRetry: (() -> Unit)? = null, modifier: Modifier = Modifier) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

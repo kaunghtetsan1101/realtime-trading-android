@@ -1,26 +1,24 @@
-# Realtime Trading — Android Portfolio App
+# Realtime Trading Android Portfolio App
+
+[![CI](https://github.com/<your-username>/realtime-trading-android/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-username>/realtime-trading-android/actions/workflows/ci.yml)
 
 A production-style Native Android app for realtime market watching and trading simulation.
 Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
-
----
 
 ## Status
 
 | Milestone | Status |
 |-----------|--------|
-| M1 — Project Scaffold | ✅ Done |
-| M2 — Core Infrastructure | ✅ Done |
-| M3 — Domain Layer | ✅ Done |
-| M4 — Data Layer | ✅ Done |
-| M5 — Watchlist Feature (MVP core) | ✅ Done |
-| M6 — Asset Detail | ✅ Done |
-| M7 — Design System + Dark Mode | Pending |
-| M8 — Search | Pending |
-| M9 — Trading Screen | Pending |
-| M10 — Settings + Polish | Pending |
-
----
+| M1 ──► Project Scaffold | ✅ Done |
+| M2 ──► Core Infrastructure | ✅ Done |
+| M3 ──► Domain Layer | ✅ Done |
+| M4 ──► Data Layer | ✅ Done |
+| M5 ──► Watchlist Feature (MVP core) | ✅ Done |
+| M6 ──► Asset Detail | ✅ Done |
+| M7 ──► Design System + Dark Mode | Pending |
+| M8 ──► Search | ✅ Done |
+| M9 ──► Trading Screen | Pending |
+| M10 ──► Settings + Polish | Pending |
 
 ## Tech Stack
 
@@ -33,41 +31,46 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 | Async | Coroutines + Flow / StateFlow |
 | Network | Retrofit + OkHttp + WebSocket |
 | Persistence | Room |
+| Logging | Timber |
+| Static analysis | detekt |
+| Formatting | Spotless + ktlint |
 | Build | Gradle multi-module + Version Catalog |
-| Testing | JUnit + MockK + Turbine + Compose UI Test |
-
----
+| Testing | JUnit + MockK + Turbine + MockWebServer |
+| Debug | LeakCanary |
+| CI | GitHub Actions |
 
 ## Module Structure
 
 ```
 realtime-trading-android/
 │
-├── app/                    # Entry point: TradingApp, MainActivity, NavHost
+├── app/                    # Entry point: TradingApp (@HiltAndroidApp), MainActivity, DI bootstrap
+├── core-navigation/        # AppNavGraph, Routes, NavigationViewModel — wires all feature screens
 │
-├── core-common/            # Result<T>, DispatcherProvider, Flow extensions
-├── core-ui/                # Shared Composables, Material3 theme, typography
-├── core-network/           # Retrofit, OkHttp, WebSocketManager, mock WS server
+├── core-common/            # Result<T>, DispatcherProvider, NetworkStatus, Flow extensions
+├── core-ui/                # Shared Composables, Material3 theme, OfflineBanner
+├── core-network/           # Retrofit, OkHttp, WebSocketManager, NetworkMonitor
 ├── core-database/          # Room DB, AssetDao, AssetEntity
 │
 ├── domain/                 # Models, repository interfaces, use cases (pure Kotlin)
 ├── data/                   # Repository implementations, mappers, Hilt bindings
 │
 ├── feature-watchlist/      # Watchlist screen — MVI ViewModel, UI, contract, tests
-└── feature-market-detail/  # Asset detail screen — TradingView chart, live price ticker
+├── feature-market-detail/  # Asset detail screen — live price ticker, 24h stats
+└── feature-search/         # Search screen — in-memory filter/sort, debounced query, MVI
 ```
 
 ### Dependency Rules
 
 ```
-feature-* ──► domain, core-ui, core-common
-data       ──► domain, core-network, core-database, core-common
-domain     ──► core-common   (no Android imports)
-core-ui    ──► core-common
-app        ──► all modules
+app            ──► core-navigation, core-ui, core-common, core-network,
+                   core-database, domain, data   (Hilt component aggregation)
+core-navigation──► feature-watchlist, feature-market-detail, feature-search
+feature-*      ──► domain, core-ui, core-common
+data           ──► domain, core-network, core-database, core-common
+domain         ──► core-common   (no Android imports)
+core-ui        ──► core-common
 ```
-
----
 
 ## Architecture
 
@@ -89,21 +92,26 @@ Event ──► ViewModel ──► State (StateFlow)
                    └──► Effect (Channel — one-shot)
 ```
 
----
-
 ## Data Flow (Live Prices)
 
 ```
-MockWebSocketServer
-       │  JSON frames (1 500 ms interval)
+Binance REST  GET /api/v3/ticker/24hr?type=MINI
+       │  all USDT pairs, sorted by volume, top 100
        ▼
-WebSocketManager.observePriceTicks()   [callbackFlow]
+AssetRepositoryImpl.syncAssets()
+  ├── upserts 100 assets into Room
+  └── builds WebSocket URL (top 50 streams)
+       │
+       ▼
+Binance WebSocket  wss://stream.binance.com/stream?streams=...
+       │  miniTicker frames ~1 s
+       ▼
+WebSocketManager.observePriceTicks()   [callbackFlow + retryWhen backoff]
        │
        ▼
 AssetRepositoryImpl
-  ├── filters by symbol
   ├── writes updated price to Room (offline cache)
-  └── maps to domain PriceTick
+  └── MutableStateFlow<String?> + flatMapLatest — reconnects on URL change
        │
        ▼
 GetWatchlistUseCase ──► observeAssets() ──► Room emits ──► UI re-renders
@@ -111,20 +119,24 @@ GetWatchlistUseCase ──► observeAssets() ──► Room emits ──► UI 
 observePriceTicks(symbol) ──► MarketDetailViewModel.recentPrices ──► price ticker
 ```
 
----
-
 ## Setup
 
 ### Prerequisites
 - Android Studio Ladybug (2024.2) or newer
 - JDK 17
-- Android SDK 35
+- Android SDK 37
 
 ### Clone and open
 ```bash
 git clone <repo-url>
 cd realtime-trading-android
 # Open in Android Studio — it will sync Gradle automatically
+```
+
+### First-time formatting fix
+After cloning, run once to format all existing files so CI passes:
+```bash
+./gradlew spotlessApply
 ```
 
 ### Build from CLI
@@ -134,13 +146,79 @@ cd realtime-trading-android
 
 ### Run tests
 ```bash
-./gradlew test                              # Unit tests (all modules)
-./gradlew :feature-watchlist:test           # Watchlist tests only
-./gradlew :feature-market-detail:test       # Market detail tests only
-./gradlew connectedAndroidTest              # Instrumented tests (requires emulator)
+./gradlew test                             # All unit tests
+./gradlew :feature-watchlist:test          # Watchlist tests only
+./gradlew :feature-market-detail:test      # Market detail tests only
+./gradlew :feature-search:test             # Search tests only
+./gradlew :core-network:test               # Network + MockWebServer tests
+./gradlew connectedAndroidTest             # Instrumented tests (requires emulator)
 ```
 
----
+## Code Quality
+
+### Static analysis — detekt
+```bash
+./gradlew detekt
+```
+Config: `config/detekt/detekt.yml`. Rules are tuned for Compose and MVI patterns —
+`LongMethod`, `LongParameterList`, and `FunctionNaming` are relaxed for `@Composable` functions.
+`MatchingDeclarationName` is disabled because Compose files contain multiple top-level declarations.
+
+### Formatting — Spotless + ktlint
+```bash
+./gradlew spotlessCheck    # CI — fails on violations
+./gradlew spotlessApply    # Auto-fix locally
+```
+Line length: 120 chars. IDE and ktlint both read `.editorconfig` from the project root.
+
+## Logging
+
+[Timber](https://github.com/JakeWharton/timber) is the logging library for all modules that
+produce meaningful runtime events (`app`, `core-network`, `data`, feature modules).
+
+- `Timber.DebugTree` is planted in `TradingApp.onCreate()` for debug builds only.
+- Release builds have zero logging overhead — no tree is planted and calls are no-ops.
+- `WebSocketManager` logs connect, tick (VERBOSE), failure (ERROR), and close (DEBUG) events.
+
+## Debug Tools
+
+**LeakCanary** is a `debugImplementation` dependency in the `app` module. It auto-installs
+via a `ContentProvider` and surfaces memory leaks in the debug notification shade. No code
+changes are required and it is automatically excluded from release builds.
+
+## Testing
+
+| Layer | Tool | Location |
+|-------|------|---------|
+| ViewModel state & effects | JUnit + MockK + Turbine | feature-watchlist, feature-market-detail, feature-search |
+| Repository logic | JUnit + MockK + Turbine | data |
+| WebSocket flow | Turbine + MockK | core-network |
+| HTTP API parsing | JUnit + MockWebServer | core-network (`MarketApiTest`) |
+| Mapper correctness | JUnit | data |
+
+**MockWebServer** runs a real in-process HTTP server during tests. `MarketApiTest` uses it to
+verify Retrofit query parameter encoding and Gson deserialisation without any network access.
+
+**Turbine** is used across all Flow-based tests to assert emissions, errors, and completion
+without manual coroutine coordination.
+
+## CI
+
+Four jobs run in parallel on every push and pull request to `main`:
+
+| Job | Command | Purpose |
+|-----|---------|---------|
+| Build | `./gradlew assembleDebug` | Verify the project compiles |
+| Unit Tests | `./gradlew test` | Run all JVM unit tests; upload reports as artifacts |
+| Detekt | `./gradlew detekt` | Static analysis |
+| Spotless | `./gradlew spotlessCheck` | Formatting check |
+
+Workflow: `.github/workflows/ci.yml`.
+Gradle build cache is managed by `gradle/actions/setup-gradle@v4` — incremental runs are
+significantly faster than cold builds.
+
+> **Badge:** Replace `<your-username>` in the badge URL at the top of this file with your
+> GitHub username after pushing.
 
 ## Key Design Decisions
 
@@ -151,4 +229,13 @@ cd realtime-trading-android
 | Effect delivery | `Channel<Effect>` | One-shot, not replayed on recomposition |
 | WS lifecycle | `callbackFlow` + `awaitClose` | WS closes automatically when collector cancels |
 | Dispatcher injection | `DispatcherProvider` interface | Enables deterministic coroutine tests |
-| Mock WS in production sources | `MockWebSocketServer` | Self-contained demo; swap for real URL via DI |
+| Dynamic symbol discovery | Binance mini-ticker REST | Fetch all USDT pairs sorted by volume; no hardcoded symbol list |
+| WS stream limit | Top 50 of 100 tracked assets | Binance combined-stream cap; ranks 51-100 show last-synced price |
+| Dynamic WS reconnect | `MutableStateFlow<String?> + flatMapLatest` | URL changes after sync automatically cancel old WS and open new one |
+| Navigation extraction | `core-navigation` module | Feature modules have zero knowledge of routes; `app` only depends on `core-navigation` |
+| detekt at root | Single task scans all modules | Simpler than per-module config without convention plugins; one CI command |
+| No detekt-formatting | Spotless handles formatting | Avoids duplicate ktlint execution and conflicting rule sets |
+| Timber debug-only | `if (BuildConfig.DEBUG)` guard | Release APK has zero logging cost; no stripping step needed |
+| LeakCanary debug-only | `debugImplementation` | Auto-excluded from release; no ProGuard rules required |
+| Search filter location | ViewModel (not use case) | `AssetFilter`/`SortOrder` are UI concerns; no domain pollution |
+| Search debounce target | Query only | Filter/sort are discrete taps — debounce adds latency with no benefit |

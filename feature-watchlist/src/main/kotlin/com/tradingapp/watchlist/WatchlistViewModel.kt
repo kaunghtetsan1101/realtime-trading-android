@@ -2,9 +2,9 @@ package com.tradingapp.watchlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tradingapp.common.dispatcher.DispatcherProvider
 import com.tradingapp.common.result.Result
 import com.tradingapp.domain.usecase.GetWatchlistUseCase
+import com.tradingapp.domain.usecase.ObserveNetworkStatusUseCase
 import com.tradingapp.domain.usecase.SyncAssetsUseCase
 import com.tradingapp.domain.usecase.ToggleFavoriteUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,30 +20,34 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class WatchlistViewModel @Inject constructor(
-    private val getWatchlist:    GetWatchlistUseCase,
-    private val toggleFavorite:  ToggleFavoriteUseCase,
-    private val syncAssets:      SyncAssetsUseCase,
-    private val dispatcherProvider: DispatcherProvider,
+class WatchlistViewModel
+@Inject
+constructor(
+    private val getWatchlist: GetWatchlistUseCase,
+    private val toggleFavorite: ToggleFavoriteUseCase,
+    private val syncAssets: SyncAssetsUseCase,
+    private val observeNetworkStatus: ObserveNetworkStatusUseCase,
 ) : ViewModel() {
-
-    private val _state   = MutableStateFlow(WatchlistState())
-    val state: StateFlow<WatchlistState> = _state.asStateFlow()
+    private val stateMutable = MutableStateFlow(WatchlistState())
+    val state: StateFlow<WatchlistState> = stateMutable.asStateFlow()
 
     // Channel-based effects: consumed once, not replayed on recomposition.
-    private val _effects = Channel<WatchlistEffect>(Channel.BUFFERED)
-    val effects = _effects.receiveAsFlow()
+    private val effectsMutable = Channel<WatchlistEffect>(Channel.BUFFERED)
+    val effects = effectsMutable.receiveAsFlow()
 
     init {
         observeWatchlist()
+        observeNetworkStatus()
+            .onEach { isOnline -> stateMutable.update { it.copy(isOffline = !isOnline) } }
+            .launchIn(viewModelScope)
         syncRemote()
     }
 
     fun onEvent(event: WatchlistEvent) {
         when (event) {
-            is WatchlistEvent.Refresh              -> syncRemote()
-            is WatchlistEvent.ToggleFavorite       -> onToggleFavorite(event.symbol, event.isFav)
-            is WatchlistEvent.AssetClicked         -> sendEffect(WatchlistEffect.NavigateToDetail(event.symbol))
+            is WatchlistEvent.Refresh -> syncRemote()
+            is WatchlistEvent.ToggleFavorite -> onToggleFavorite(event.symbol, event.isFav)
+            is WatchlistEvent.AssetClicked -> sendEffect(WatchlistEffect.NavigateToDetail(event.symbol))
         }
     }
 
@@ -53,12 +57,18 @@ class WatchlistViewModel @Inject constructor(
         getWatchlist()
             .onEach { result ->
                 when (result) {
-                    is Result.Loading -> _state.update { it.copy(isLoading = true,  error = null) }
-                    is Result.Success -> _state.update { it.copy(isLoading = false, assets = result.data, error = null) }
-                    is Result.Error   -> _state.update { it.copy(isLoading = false, error = result.message) }
+                    is Result.Loading -> stateMutable.update { it.copy(isLoading = true, error = null) }
+                    is Result.Success ->
+                        stateMutable.update {
+                            it.copy(
+                                isLoading = false,
+                                assets = result.data,
+                                error = null,
+                            )
+                        }
+                    is Result.Error -> stateMutable.update { it.copy(isLoading = false, error = result.message) }
                 }
-            }
-            .launchIn(viewModelScope)
+            }.launchIn(viewModelScope)
     }
 
     private fun syncRemote() {
@@ -78,6 +88,6 @@ class WatchlistViewModel @Inject constructor(
     }
 
     private fun sendEffect(effect: WatchlistEffect) {
-        viewModelScope.launch { _effects.send(effect) }
+        viewModelScope.launch { effectsMutable.send(effect) }
     }
 }

@@ -5,15 +5,25 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AssetMapperTest {
-
     private fun dto(
         symbol: String = "BTCUSDT",
         lastPrice: String = "67500.0",
         priceChange: String = "500.0",
         priceChangePercent: String = "0.75",
+        highPrice: String = "68000.0",
+        lowPrice: String = "67000.0",
         volume: String = "1000.0",
         quoteVolume: String = "67500000.0",
-    ) = BinanceTicker24hrDto(symbol, lastPrice, priceChange, priceChangePercent, volume, quoteVolume)
+    ) = BinanceTicker24hrDto(
+        symbol,
+        lastPrice,
+        priceChange,
+        priceChangePercent,
+        highPrice,
+        lowPrice,
+        volume,
+        quoteVolume,
+    )
 
     @Test
     fun `toEntity strips USDT suffix from symbol`() {
@@ -54,13 +64,14 @@ class AssetMapperTest {
 
     @Test
     fun `toEntity parses all string fields to Double`() {
-        val entity = dto(
-            lastPrice          = "67500.12",
-            priceChange        = "500.50",
-            priceChangePercent = "0.75",
-            volume             = "1234.56",
-            quoteVolume        = "83456789.0",
-        ).toEntity()
+        val entity =
+            dto(
+                lastPrice = "67500.12",
+                priceChange = "500.50",
+                priceChangePercent = "0.75",
+                volume = "1234.56",
+                quoteVolume = "83456789.0",
+            ).toEntity()
 
         assertEquals(67500.12, entity.price, 0.001)
         assertEquals(500.50, entity.change24h, 0.001)

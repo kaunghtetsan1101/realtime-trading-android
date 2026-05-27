@@ -14,17 +14,15 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
-
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): TradingDatabase =
-        Room.databaseBuilder(
+    fun provideDatabase(@ApplicationContext context: Context): TradingDatabase = Room
+        .databaseBuilder(
             context,
             TradingDatabase::class.java,
             "trading.db",
-        )
-            .addMigrations(TradingDatabase.MIGRATION_1_2)
-            .build()
+        ).addMigrations(TradingDatabase.MIGRATION_1_2)
+        .build()
 
     @Provides
     fun provideAssetDao(db: TradingDatabase): AssetDao = db.assetDao()

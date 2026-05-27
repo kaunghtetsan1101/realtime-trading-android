@@ -12,17 +12,21 @@ import com.tradingapp.domain.model.Asset
 
 data class WatchlistState(
     val assets: List<Asset> = emptyList(),
-    val isLoading: Boolean  = true,
-    val error: String?      = null,
+    val isLoading: Boolean = true,
+    val error: String? = null,
+    val isOffline: Boolean = false,
 )
 
 sealed interface WatchlistEvent {
     data object Refresh : WatchlistEvent
-    data class  ToggleFavorite(val symbol: String, val isFav: Boolean) : WatchlistEvent
-    data class  AssetClicked(val symbol: String) : WatchlistEvent
+
+    data class ToggleFavorite(val symbol: String, val isFav: Boolean) : WatchlistEvent
+
+    data class AssetClicked(val symbol: String) : WatchlistEvent
 }
 
 sealed interface WatchlistEffect {
     data class NavigateToDetail(val symbol: String) : WatchlistEffect
-    data class ShowSnackbar(val message: String)    : WatchlistEffect
+
+    data class ShowSnackbar(val message: String) : WatchlistEffect
 }

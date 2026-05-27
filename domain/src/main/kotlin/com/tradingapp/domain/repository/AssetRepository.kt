@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.Flow
  * with live WebSocket ticks.
  */
 interface AssetRepository {
-
     /** Emits the full asset list, updating on every price tick and DB change. */
     fun observeAssets(): Flow<List<Asset>>
 

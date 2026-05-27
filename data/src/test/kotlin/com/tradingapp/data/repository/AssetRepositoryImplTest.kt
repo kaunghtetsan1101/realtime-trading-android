@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.tradingapp.common.dispatcher.DispatcherProvider
 import com.tradingapp.database.dao.AssetDao
 import com.tradingapp.network.api.MarketApi
+import com.tradingapp.network.model.BinanceMiniTickerDto
 import com.tradingapp.network.model.BinanceTicker24hrDto
 import com.tradingapp.network.model.PriceTickDto
 import com.tradingapp.network.websocket.WebSocketManager
@@ -23,15 +24,15 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AssetRepositoryImplTest {
-
     private val testDispatcher = UnconfinedTestDispatcher()
 
-    private val dispatchers = object : DispatcherProvider {
-        override val main: CoroutineDispatcher = testDispatcher
-        override val io: CoroutineDispatcher = testDispatcher
-        override val default: CoroutineDispatcher = testDispatcher
-        override val unconfined: CoroutineDispatcher = testDispatcher
-    }
+    private val dispatchers =
+        object : DispatcherProvider {
+            override val main: CoroutineDispatcher = testDispatcher
+            override val io: CoroutineDispatcher = testDispatcher
+            override val default: CoroutineDispatcher = testDispatcher
+            override val unconfined: CoroutineDispatcher = testDispatcher
+        }
 
     private val assetDao = mockk<AssetDao>(relaxed = true)
     private val marketApi = mockk<MarketApi>(relaxed = true)
@@ -45,9 +46,9 @@ class AssetRepositoryImplTest {
         every { assetDao.observeAll() } returns emptyFlow()
         every { assetDao.observeBySymbol(any()) } returns emptyFlow()
         every { assetDao.observeFavorites() } returns emptyFlow()
-        return AssetRepositoryImpl(
-            assetDao, marketApi, webSocketManager, dispatchers, "wss://fake"
-        )
+        // DB empty on first launch — repo falls back to BOOTSTRAP_SYMBOLS for initial WS URL.
+        coEvery { assetDao.getTopSymbols(any()) } returns emptyList()
+        return AssetRepositoryImpl(assetDao, marketApi, webSocketManager, dispatchers)
     }
 
     // -------------------------------------------------------------------------
@@ -55,122 +56,146 @@ class AssetRepositoryImplTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `WS tick causes assetDao updatePrice to be called — regression for watchlist bug`() =
-        runTest(testDispatcher) {
-            val repo = buildRepo()
+    fun `WS tick causes assetDao updatePrice to be called — regression for watchlist bug`() = runTest(testDispatcher) {
+        val repo = buildRepo()
 
-            wsSource.emit(PriceTickDto("BTC", 67_500.0, 1_000L))
+        wsSource.emit(PriceTickDto("BTC", 67_500.0, 1_000L))
 
-            coVerify { assetDao.updatePrice("BTC", 67_500.0, 1_000L) }
-        }
+        coVerify { assetDao.updatePrice("BTC", 67_500.0, 1_000L) }
+    }
 
     // -------------------------------------------------------------------------
     // SharedFlow pipeline
     // -------------------------------------------------------------------------
 
     @Test
-    fun `WS tick is relayed to observePriceTicks subscriber for matching symbol`() =
-        runTest(testDispatcher) {
-            val repo = buildRepo()
+    fun `WS tick is relayed to observePriceTicks subscriber for matching symbol`() = runTest(testDispatcher) {
+        val repo = buildRepo()
 
-            repo.observePriceTicks("BTC").test {
-                wsSource.emit(PriceTickDto("BTC", 67_500.0, 2_000L))
+        repo.observePriceTicks("BTC").test {
+            wsSource.emit(PriceTickDto("BTC", 67_500.0, 2_000L))
 
-                val tick = awaitItem()
-                assertEquals("BTC", tick.symbol)
-                assertEquals(67_500.0, tick.price, 0.001)
-                assertEquals(2_000L, tick.timestamp)
+            val tick = awaitItem()
+            assertEquals("BTC", tick.symbol)
+            assertEquals(67_500.0, tick.price, 0.001)
+            assertEquals(2_000L, tick.timestamp)
 
-                cancelAndIgnoreRemainingEvents()
-            }
+            cancelAndIgnoreRemainingEvents()
         }
+    }
 
     @Test
-    fun `WS tick for different symbol does not reach observePriceTicks subscriber`() =
-        runTest(testDispatcher) {
-            val repo = buildRepo()
+    fun `WS tick for different symbol does not reach observePriceTicks subscriber`() = runTest(testDispatcher) {
+        val repo = buildRepo()
 
-            repo.observePriceTicks("BTC").test {
-                wsSource.emit(PriceTickDto("ETH", 3_000.0, 3_000L))
+        repo.observePriceTicks("BTC").test {
+            wsSource.emit(PriceTickDto("ETH", 3_000.0, 3_000L))
 
-                expectNoEvents()
-                cancelAndIgnoreRemainingEvents()
-            }
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
         }
+    }
 
     // -------------------------------------------------------------------------
-    // REST sync
+    // REST sync — two-step discovery
     // -------------------------------------------------------------------------
 
     @Test
-    fun `syncAssets sends URL-encoded JSON array, inserts new rows, and updates market data`() =
+    fun `syncAssets discovers USDT pairs by volume, fetches full tickers, and upserts Room`() =
         runTest(testDispatcher) {
             val repo = buildRepo()
-            val fakeDtos = AssetRepositoryImpl.TRACKED_SYMBOLS.map { sym ->
-                BinanceTicker24hrDto(sym, "100.0", "1.0", "1.0", "1000.0", "100000.0")
-            }
-            coEvery { marketApi.get24hrTickers(any()) } returns fakeDtos
+            val miniTickers =
+                listOf(
+                    BinanceMiniTickerDto("BTCUSDT", "1000000.0"),
+                    BinanceMiniTickerDto("ETHUSDT", "500000.0"),
+                    BinanceMiniTickerDto("ETHBTC", "100000.0"), // non-USDT — must be filtered out
+                )
+            val fullTickers =
+                listOf(
+                    fakeTicker("BTCUSDT"),
+                    fakeTicker("ETHUSDT"),
+                )
+            coEvery { marketApi.getAllMiniTickers() } returns miniTickers
+            coEvery { marketApi.get24hrTickers(any()) } returns fullTickers
 
             repo.syncAssets()
 
+            // Discovery call made
+            coVerify { marketApi.getAllMiniTickers() }
+            // Full-data call includes USDT pairs only
             coVerify {
                 marketApi.get24hrTickers(
-                    withArg { symbols ->
-                        assert(symbols.startsWith("[\"BTCUSDT\"")) {
-                            "Expected symbols to start with [\"BTCUSDT\" but was: $symbols"
-                        }
-                        assert(symbols.contains("\"ETHUSDT\"")) {
-                            "Expected ETHUSDT in symbols but was: $symbols"
-                        }
-                        assert(symbols.endsWith("ADAUSDT\"]")) {
-                            "Expected symbols to end with ADAUSDT\"] but was: $symbols"
-                        }
-                    }
+                    withArg { json ->
+                        assert(json.contains("BTCUSDT")) { "BTCUSDT expected in $json" }
+                        assert(json.contains("ETHUSDT")) { "ETHUSDT expected in $json" }
+                        assert(!json.contains("ETHBTC")) { "ETHBTC should be filtered; found in $json" }
+                    },
                 )
             }
-            // Step 1: new rows inserted with IGNORE (preserves isFavorite on conflict)
+            // DB upsert executed for both symbols
             coVerify { assetDao.insertAllIgnore(any()) }
-            // Step 2: market-data columns updated — isFavorite never touched
-            coVerify(exactly = AssetRepositoryImpl.TRACKED_SYMBOLS.size) {
-                assetDao.updateMarketData(any(), any(), any(), any(), any(), any(), any(), any())
+            coVerify(exactly = 2) {
+                assetDao.updateMarketData(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
             }
         }
 
     @Test
-    fun `syncAssets does not call updateMarketData with isFavorite — persistence guaranteed`() =
-        runTest(testDispatcher) {
-            // Regression guard: ensure the two-step upsert path is taken, not the old REPLACE path.
-            val repo = buildRepo()
-            coEvery { marketApi.get24hrTickers(any()) } returns listOf(
-                BinanceTicker24hrDto("BTCUSDT", "67500.0", "500.0", "0.75", "1000.0", "67500000.0")
+    fun `syncAssets does not call setFavorite — isFavorite persistence guaranteed`() = runTest(testDispatcher) {
+        val repo = buildRepo()
+        coEvery { marketApi.getAllMiniTickers() } returns
+            listOf(
+                BinanceMiniTickerDto("BTCUSDT", "1000000.0"),
             )
+        coEvery { marketApi.get24hrTickers(any()) } returns listOf(fakeTicker("BTCUSDT"))
 
-            repo.syncAssets()
+        repo.syncAssets()
 
-            // The dangerous old method must NOT be called
-            coVerify(exactly = 0) { assetDao.setFavorite(any(), any()) }
-        }
+        // The dangerous REPLACE path must never be taken
+        coVerify(exactly = 0) { assetDao.setFavorite(any(), any()) }
+    }
 
     // -------------------------------------------------------------------------
     // observeAssets delegates to Room
     // -------------------------------------------------------------------------
 
     @Test
-    fun `observeAssets returns mapped entities from Room Flow`() =
-        runTest(testDispatcher) {
-            every { webSocketManager.observePriceTicks(any()) } returns wsSource
-            every { assetDao.observeAll() } returns flowOf(emptyList())
-            every { assetDao.observeBySymbol(any()) } returns emptyFlow()
-            every { assetDao.observeFavorites() } returns emptyFlow()
+    fun `observeAssets returns mapped entities from Room Flow`() = runTest(testDispatcher) {
+        every { webSocketManager.observePriceTicks(any()) } returns wsSource
+        every { assetDao.observeAll() } returns flowOf(emptyList())
+        every { assetDao.observeBySymbol(any()) } returns emptyFlow()
+        every { assetDao.observeFavorites() } returns emptyFlow()
+        coEvery { assetDao.getTopSymbols(any()) } returns emptyList()
 
-            val repo = AssetRepositoryImpl(
-                assetDao, marketApi, webSocketManager, dispatchers, "wss://fake"
-            )
+        val repo = AssetRepositoryImpl(assetDao, marketApi, webSocketManager, dispatchers)
 
-            repo.observeAssets().test {
-                val assets = awaitItem()
-                assertEquals(emptyList<Any>(), assets)
-                cancelAndIgnoreRemainingEvents()
-            }
+        repo.observeAssets().test {
+            val assets = awaitItem()
+            assertEquals(emptyList<Any>(), assets)
+            cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    // --- Helpers ---
+
+    private fun fakeTicker(symbol: String) = BinanceTicker24hrDto(
+        symbol = symbol,
+        lastPrice = "100.0",
+        priceChange = "1.0",
+        priceChangePercent = "1.0",
+        highPrice = "105.0",
+        lowPrice = "95.0",
+        volume = "1000.0",
+        quoteVolume = "100000.0",
+    )
 }

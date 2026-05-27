@@ -20,11 +20,7 @@ import androidx.compose.ui.viewinterop.AndroidView
  * Symbol mapping: bare symbol (e.g. "BTC") → TradingView symbol "BINANCE:BTCUSDT".
  */
 @Composable
-fun TradingViewChart(
-    symbol: String,
-    darkTheme: Boolean,
-    modifier: Modifier = Modifier,
-) {
+fun TradingViewChart(symbol: String, darkTheme: Boolean, modifier: Modifier = Modifier) {
     AndroidView(
         factory = { context ->
             WebView(context).apply {
@@ -34,9 +30,9 @@ fun TradingViewChart(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT,
                 )
-                settings.javaScriptEnabled  = true
-                settings.domStorageEnabled  = true
-                webViewClient               = WebViewClient()
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                webViewClient = WebViewClient()
                 loadDataWithBaseURL(null, buildChartHtml(symbol, darkTheme), "text/html", "UTF-8", null)
             }
         },
@@ -48,8 +44,8 @@ fun TradingViewChart(
 }
 
 private fun buildChartHtml(symbol: String, darkTheme: Boolean): String {
-    val tvSymbol  = "BINANCE:${symbol}USDT"
-    val theme     = if (darkTheme) "dark" else "light"
+    val tvSymbol = "BINANCE:${symbol}USDT"
+    val theme = if (darkTheme) "dark" else "light"
     return """
         <!DOCTYPE html>
         <html>

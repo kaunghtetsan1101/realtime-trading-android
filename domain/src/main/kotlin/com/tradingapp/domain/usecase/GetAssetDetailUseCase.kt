@@ -7,9 +7,8 @@ import com.tradingapp.domain.repository.AssetRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-class GetAssetDetailUseCase @Inject constructor(
-    private val repository: AssetRepository,
-) {
-    operator fun invoke(symbol: String): Flow<Result<Asset?>> =
-        repository.observeAsset(symbol).asResult()
+class GetAssetDetailUseCase
+@Inject
+constructor(private val repository: AssetRepository) {
+    operator fun invoke(symbol: String): Flow<Result<Asset?>> = repository.observeAsset(symbol).asResult()
 }

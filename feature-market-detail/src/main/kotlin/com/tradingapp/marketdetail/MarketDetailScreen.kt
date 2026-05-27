@@ -1,5 +1,6 @@
 package com.tradingapp.marketdetail
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,7 +26,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tradingapp.domain.model.Asset
 import com.tradingapp.ui.components.ErrorState
 import com.tradingapp.ui.components.LoadingIndicator
+import com.tradingapp.ui.components.OfflineBanner
 import com.tradingapp.ui.theme.PriceDown
 import com.tradingapp.ui.theme.PriceUp
 import com.tradingapp.ui.theme.TradingAppTheme
@@ -41,10 +42,7 @@ import com.tradingapp.ui.theme.TradingAppTheme
 // viewModel is supplied by AppNavGraph via hiltViewModel(creationCallback = ...) — not a default param
 // because the Factory needs the symbol from the Nav3 route key.
 @Composable
-fun MarketDetailScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: MarketDetailViewModel,
-) {
+fun MarketDetailScreen(onNavigateBack: () -> Unit, viewModel: MarketDetailViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
@@ -56,17 +54,14 @@ fun MarketDetailScreen(
     }
 
     MarketDetailContent(
-        state   = state,
+        state = state,
         onEvent = viewModel::onEvent,
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MarketDetailContent(
-    state: MarketDetailState,
-    onEvent: (MarketDetailEvent) -> Unit,
-) {
+private fun MarketDetailContent(state: MarketDetailState, onEvent: (MarketDetailEvent) -> Unit) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val title = state.asset?.let { "${it.symbol} / ${it.name}" } ?: "Detail"
 
@@ -78,7 +73,7 @@ private fun MarketDetailContent(
                 navigationIcon = {
                     IconButton(onClick = { onEvent(MarketDetailEvent.NavigateBack) }) {
                         Icon(
-                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                         )
                     }
@@ -95,22 +90,20 @@ private fun MarketDetailContent(
                 modifier = Modifier.padding(padding),
             )
             state.asset != null -> DetailBody(
-                asset     = state.asset,
-                modifier  = Modifier.padding(padding),
+                asset = state.asset,
+                isOffline = state.isOffline,
+                modifier = Modifier.padding(padding),
             )
         }
     }
 }
 
 @Composable
-private fun DetailBody(
-    asset: Asset,
-    modifier: Modifier = Modifier,
-) {
-    val darkTheme  = isSystemInDarkTheme()
+private fun DetailBody(asset: Asset, isOffline: Boolean, modifier: Modifier = Modifier) {
+    val darkTheme = isSystemInDarkTheme()
     val priceColor = if (asset.isUp) PriceUp else PriceDown
-    val pctSign    = if (asset.isUp) "+" else ""
-    val pctLabel   = "$pctSign${"%.2f".format(asset.priceChangePct24h)}%"
+    val pctSign = if (asset.isUp) "+" else ""
+    val pctLabel = "$pctSign${"%.2f".format(asset.priceChangePct24h)}%"
 
     Column(
         modifier = modifier
@@ -119,19 +112,19 @@ private fun DetailBody(
     ) {
         // --- Price header ---
         Row(
-            verticalAlignment   = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
             Text(
-                text  = "%.2f".format(asset.currentPrice),
+                text = "%.2f".format(asset.currentPrice),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text  = pctLabel,
+                text = pctLabel,
                 style = MaterialTheme.typography.titleMedium,
                 color = priceColor,
                 fontWeight = FontWeight.SemiBold,
@@ -140,11 +133,16 @@ private fun DetailBody(
 
         // --- TradingView chart ---
         TradingViewChart(
-            symbol    = asset.symbol,
+            symbol = asset.symbol,
             darkTheme = darkTheme,
-            modifier  = Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .height(350.dp),
+        )
+
+        OfflineBanner(
+            isOffline = isOffline,
+            lastUpdatedMs = asset.lastUpdated,
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -163,14 +161,14 @@ private fun StatsSection(asset: Asset) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text  = "Stats",
+            text = "Stats",
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
         )
         StatRow(label = "24h High", value = "${"%.2f".format(asset.high24h)}")
-        StatRow(label = "24h Low",  value = "${"%.2f".format(asset.low24h)}")
-        StatRow(label = "Volume",   value = formatLargeNumber(asset.volume24h))
-        StatRow(label = "Mkt Cap",  value = formatLargeNumber(asset.marketCap))
+        StatRow(label = "24h Low", value = "${"%.2f".format(asset.low24h)}")
+        StatRow(label = "Volume", value = formatLargeNumber(asset.volume24h))
+        StatRow(label = "Mkt Cap", value = formatLargeNumber(asset.marketCap))
     }
 }
 
@@ -181,12 +179,12 @@ private fun StatRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
-            text  = label,
+            text = label,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
         )
         Text(
-            text  = value,
+            text = value,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
         )
@@ -195,26 +193,26 @@ private fun StatRow(label: String, value: String) {
 
 private fun formatLargeNumber(value: Double): String = when {
     value >= 1_000_000_000.0 -> "${"%.2f".format(value / 1_000_000_000.0)}B"
-    value >= 1_000_000.0     -> "${"%.2f".format(value / 1_000_000.0)}M"
-    value >= 1_000.0         -> "${"%.2f".format(value / 1_000.0)}K"
-    else                     -> "%.2f".format(value)
+    value >= 1_000_000.0 -> "${"%.2f".format(value / 1_000_000.0)}M"
+    value >= 1_000.0 -> "${"%.2f".format(value / 1_000.0)}K"
+    else -> "%.2f".format(value)
 }
 
 // --- Previews ---
 
 private fun fakeAsset() = Asset(
-    symbol            = "BTC",
-    name              = "Bitcoin",
-    currentPrice      = 67_500.0,
-    priceChange24h    = 1_575.0,
+    symbol = "BTC",
+    name = "Bitcoin",
+    currentPrice = 67_500.0,
+    priceChange24h = 1_575.0,
     priceChangePct24h = 2.34,
-    high24h           = 68_200.0,
-    low24h            = 66_100.0,
-    marketCap         = 1_320_000_000_000.0,
-    volume24h         = 28_500_000_000.0,
-    logoUrl           = null,
-    isFavorite        = false,
-    lastUpdated       = System.currentTimeMillis(),
+    high24h = 68_200.0,
+    low24h = 66_100.0,
+    marketCap = 1_320_000_000_000.0,
+    volume24h = 28_500_000_000.0,
+    logoUrl = null,
+    isFavorite = false,
+    lastUpdated = System.currentTimeMillis(),
 )
 
 @Preview(showBackground = true)
@@ -222,7 +220,7 @@ private fun fakeAsset() = Asset(
 private fun DetailPreview() {
     TradingAppTheme {
         MarketDetailContent(
-            state   = MarketDetailState(asset = fakeAsset(), isLoading = false),
+            state = MarketDetailState(asset = fakeAsset(), isLoading = false, isOffline = false),
             onEvent = {},
         )
     }
@@ -241,7 +239,7 @@ private fun DetailLoadingPreview() {
 private fun DetailErrorPreview() {
     TradingAppTheme {
         MarketDetailContent(
-            state   = MarketDetailState(isLoading = false, error = "Asset not found"),
+            state = MarketDetailState(isLoading = false, error = "Asset not found"),
             onEvent = {},
         )
     }

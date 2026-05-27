@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.tradingapp.common.result.Result
 import com.tradingapp.domain.model.Asset
 import com.tradingapp.domain.usecase.GetWatchlistUseCase
+import com.tradingapp.domain.usecase.ObserveNetworkStatusUseCase
 import com.tradingapp.domain.usecase.SyncAssetsUseCase
 import com.tradingapp.domain.usecase.ToggleFavoriteUseCase
 import io.mockk.coEvery
@@ -12,6 +13,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -27,12 +29,12 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WatchlistViewModelTest {
-
     private val testDispatcher = StandardTestDispatcher()
 
-    private val getWatchlist   = mockk<GetWatchlistUseCase>()
-    private val syncAssets     = mockk<SyncAssetsUseCase>()
+    private val getWatchlist = mockk<GetWatchlistUseCase>()
+    private val syncAssets = mockk<SyncAssetsUseCase>()
     private val toggleFavorite = mockk<ToggleFavoriteUseCase>()
+    private val observeNetworkStatus = mockk<ObserveNetworkStatusUseCase>()
 
     private lateinit var viewModel: WatchlistViewModel
 
@@ -41,6 +43,7 @@ class WatchlistViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { getWatchlist() } returns flowOf(Result.Loading)
         coEvery { syncAssets() } returns kotlin.Result.success(Unit)
+        every { observeNetworkStatus() } returns flowOf(true) // online by default
     }
 
     @After
@@ -118,20 +121,48 @@ class WatchlistViewModelTest {
         assertEquals(assets, viewModel.state.value.assets)
     }
 
+    @Test
+    fun `network offline sets isOffline true`() = runTest {
+        val networkFlow = MutableStateFlow(true)
+        every { observeNetworkStatus() } returns networkFlow
+
+        viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(viewModel.state.value.isOffline)
+
+        networkFlow.value = false
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(viewModel.state.value.isOffline)
+    }
+
+    @Test
+    fun `network back online clears isOffline`() = runTest {
+        val networkFlow = MutableStateFlow(false)
+        every { observeNetworkStatus() } returns networkFlow
+
+        viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(viewModel.state.value.isOffline)
+
+        networkFlow.value = true
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(viewModel.state.value.isOffline)
+    }
+
     // --- Helpers ---
 
-    private fun buildViewModel() = WatchlistViewModel(getWatchlist, toggleFavorite, syncAssets)
+    private fun buildViewModel() = WatchlistViewModel(getWatchlist, toggleFavorite, syncAssets, observeNetworkStatus)
 
     private fun fakeAsset(symbol: String) = Asset(
-        symbol            = symbol,
-        name              = symbol,
-        currentPrice      = 100.0,
-        priceChange24h    = 1.0,
+        symbol = symbol,
+        name = symbol,
+        currentPrice = 100.0,
+        priceChange24h = 1.0,
         priceChangePct24h = 1.0,
-        marketCap         = 1_000_000.0,
-        volume24h         = 100_000.0,
-        logoUrl           = null,
-        isFavorite        = false,
-        lastUpdated       = 0L,
+        marketCap = 1_000_000.0,
+        volume24h = 100_000.0,
+        logoUrl = null,
+        isFavorite = false,
+        lastUpdated = 0L,
     )
 }

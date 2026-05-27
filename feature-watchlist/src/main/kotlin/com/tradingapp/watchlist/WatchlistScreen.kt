@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,14 +42,15 @@ import com.tradingapp.domain.model.Asset
 import com.tradingapp.ui.components.EmptyState
 import com.tradingapp.ui.components.ErrorState
 import com.tradingapp.ui.components.LoadingIndicator
+import com.tradingapp.ui.components.OfflineBanner
 import com.tradingapp.ui.theme.PriceDown
 import com.tradingapp.ui.theme.PriceUp
 import com.tradingapp.ui.theme.TradingAppTheme
-import java.util.Locale
 
 @Composable
 fun WatchlistScreen(
     onAssetClick: (String) -> Unit,
+    onSearchClick: () -> Unit,
     viewModel: WatchlistViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -58,15 +60,16 @@ fun WatchlistScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is WatchlistEffect.NavigateToDetail -> onAssetClick(effect.symbol)
-                is WatchlistEffect.ShowSnackbar     -> snackbarHost.showSnackbar(effect.message)
+                is WatchlistEffect.ShowSnackbar -> snackbarHost.showSnackbar(effect.message)
             }
         }
     }
 
     WatchlistContent(
-        state        = state,
+        state = state,
         snackbarHost = snackbarHost,
-        onEvent      = viewModel::onEvent,
+        onEvent = viewModel::onEvent,
+        onSearchClick = onSearchClick,
     )
 }
 
@@ -76,10 +79,24 @@ private fun WatchlistContent(
     state: WatchlistState,
     snackbarHost: SnackbarHostState,
     onEvent: (WatchlistEvent) -> Unit,
+    onSearchClick: () -> Unit,
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Market Watch", fontWeight = FontWeight.SemiBold) })
+            Column {
+                TopAppBar(
+                    title = { Text("Market Watch", fontWeight = FontWeight.SemiBold) },
+                    actions = {
+                        IconButton(onClick = onSearchClick) {
+                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
+                    },
+                )
+                OfflineBanner(
+                    isOffline = state.isOffline,
+                    lastUpdatedMs = state.assets.firstOrNull()?.lastUpdated,
+                )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHost) },
     ) { padding ->
@@ -91,13 +108,13 @@ private fun WatchlistContent(
                 modifier = Modifier.padding(padding),
             )
             state.assets.isEmpty() -> EmptyState(
-                title    = "No assets",
+                title = "No assets",
                 subtitle = "Pull to refresh or check your connection.",
                 modifier = Modifier.padding(padding),
             )
             else -> AssetList(
-                assets   = state.assets,
-                onEvent  = onEvent,
+                assets = state.assets,
+                onEvent = onEvent,
                 modifier = Modifier.padding(padding),
             )
         }
@@ -105,16 +122,12 @@ private fun WatchlistContent(
 }
 
 @Composable
-private fun AssetList(
-    assets: List<Asset>,
-    onEvent: (WatchlistEvent) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun AssetList(assets: List<Asset>, onEvent: (WatchlistEvent) -> Unit, modifier: Modifier = Modifier) {
     LazyColumn(modifier = modifier.fillMaxSize()) {
         items(assets, key = { it.symbol }) { asset ->
             AssetRow(
-                asset    = asset,
-                onClick  = { onEvent(WatchlistEvent.AssetClicked(asset.symbol)) },
+                asset = asset,
+                onClick = { onEvent(WatchlistEvent.AssetClicked(asset.symbol)) },
                 onFavClick = {
                     onEvent(WatchlistEvent.ToggleFavorite(asset.symbol, !asset.isFavorite))
                 },
@@ -125,18 +138,14 @@ private fun AssetList(
 }
 
 @Composable
-private fun AssetRow(
-    asset: Asset,
-    onClick: () -> Unit,
-    onFavClick: () -> Unit,
-) {
+private fun AssetRow(asset: Asset, onClick: () -> Unit, onFavClick: () -> Unit) {
     val priceColor = if (asset.isUp) PriceUp else PriceDown
-    val trendIcon  = if (asset.isUp) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown
-    val pctSign    = if (asset.isUp) "+" else ""
-    val pctLabel   = "$pctSign${"%.2f".format(asset.priceChangePct24h)}%"
+    val trendIcon = if (asset.isUp) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown
+    val pctSign = if (asset.isUp) "+" else ""
+    val pctLabel = "$pctSign${"%.2f".format(asset.priceChangePct24h)}%"
 
     Row(
-        verticalAlignment   = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxWidth()
@@ -146,12 +155,12 @@ private fun AssetRow(
         // Symbol + name
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text  = asset.symbol,
+                text = asset.symbol,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text  = asset.name,
+                text = asset.name,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             )
@@ -160,19 +169,19 @@ private fun AssetRow(
         // Price + change
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text  = "%.2f".format(asset.currentPrice),
+                text = "%.2f".format(asset.currentPrice),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector        = trendIcon,
+                    imageVector = trendIcon,
                     contentDescription = null,
-                    tint               = priceColor,
-                    modifier           = Modifier.padding(end = 2.dp),
+                    tint = priceColor,
+                    modifier = Modifier.padding(end = 2.dp),
                 )
                 Text(
-                    text  = pctLabel,
+                    text = pctLabel,
                     style = MaterialTheme.typography.bodyMedium,
                     color = priceColor,
                 )
@@ -193,16 +202,16 @@ private fun AssetRow(
 // --- Previews ---
 
 private fun fakeAsset(symbol: String, price: Double, pct: Double, fav: Boolean = false) = Asset(
-    symbol            = symbol,
-    name              = symbol,
-    currentPrice      = price,
-    priceChange24h    = price * pct / 100,
+    symbol = symbol,
+    name = symbol,
+    currentPrice = price,
+    priceChange24h = price * pct / 100,
     priceChangePct24h = pct,
-    marketCap         = 1_000_000_000.0,
-    volume24h         = 50_000_000.0,
-    logoUrl           = null,
-    isFavorite        = fav,
-    lastUpdated       = System.currentTimeMillis(),
+    marketCap = 1_000_000_000.0,
+    volume24h = 50_000_000.0,
+    logoUrl = null,
+    isFavorite = fav,
+    lastUpdated = System.currentTimeMillis(),
 )
 
 @Preview(showBackground = true)
@@ -212,14 +221,15 @@ private fun WatchlistPreview() {
         WatchlistContent(
             state = WatchlistState(
                 isLoading = false,
-                assets    = listOf(
-                    fakeAsset("BTC",  67_500.0,  2.34, fav = true),
-                    fakeAsset("ETH",   3_450.0, -1.12),
-                    fakeAsset("SOL",     175.0,  5.67),
+                assets = listOf(
+                    fakeAsset("BTC", 67_500.0, 2.34, fav = true),
+                    fakeAsset("ETH", 3_450.0, -1.12),
+                    fakeAsset("SOL", 175.0, 5.67),
                 ),
             ),
             snackbarHost = remember { SnackbarHostState() },
-            onEvent      = {},
+            onEvent = {},
+            onSearchClick = {},
         )
     }
 }
@@ -227,7 +237,7 @@ private fun WatchlistPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun WatchlistLoadingPreview() {
-    TradingAppTheme { WatchlistContent(WatchlistState(), remember { SnackbarHostState() }, {}) }
+    TradingAppTheme { WatchlistContent(WatchlistState(), remember { SnackbarHostState() }, {}, {}) }
 }
 
 @Preview(showBackground = true)
@@ -237,6 +247,7 @@ private fun WatchlistErrorPreview() {
         WatchlistContent(
             WatchlistState(isLoading = false, error = "Network unavailable"),
             remember { SnackbarHostState() },
+            {},
             {},
         )
     }

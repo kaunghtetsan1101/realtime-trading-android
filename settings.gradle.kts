@@ -24,13 +24,13 @@ include(":core-common")
 include(":core-ui")
 include(":core-network")
 include(":core-database")
+include(":core-navigation")
 include(":domain")
 include(":data")
 include(":feature-watchlist")
-
 include(":feature-market-detail")
+include(":feature-search")
 
 // Future modules — uncomment when ready:
 // include(":core-designsystem")
-// include(":feature-search")
 // include(":feature-settings")

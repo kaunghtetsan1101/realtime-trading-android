@@ -1,4 +1,4 @@
-# Product Plan — Realtime Trading / Market Watch App
+# Product Plan -> Realtime Trading / Market Watch App
 
 ## Product Vision
 
@@ -12,7 +12,7 @@ Create a polished native Android portfolio app that simulates realtime market tr
 
 ## MVP Feature Roadmap
 
-### Milestone 1 — Foundation
+### Milestone 1 —> Foundation
 
 - Multi-module setup
 - Design system
@@ -20,28 +20,28 @@ Create a polished native Android portfolio app that simulates realtime market tr
 - Fake market data source
 - Watchlist UI skeleton
 
-### Milestone 2 — Realtime Watchlist
+### Milestone 2 —> Realtime Watchlist
 
 - WebSocket or mock streaming data source
 - Watchlist screen with live price updates
 - Loading/error/empty states
 - Lifecycle-aware stream collection
 
-### Milestone 3 — Persistence
+### Milestone 3 —> Persistence
 
 - Favorite assets
 - Room cache
 - Offline latest price display
 - DataStore settings
 
-### Milestone 4 — Asset Detail
+### Milestone 4 —> Asset Detail
 
 - Asset detail page
 - Price movement summary
 - Basic chart placeholder or simple chart
 - Recent price history
 
-### Milestone 5 — Quality and Portfolio Polish
+### Milestone 5 —> Quality and Portfolio Polish
 
 - Unit tests
 - ViewModel tests

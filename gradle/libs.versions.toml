@@ -36,6 +36,16 @@ room                = "2.8.4"
 # Coroutines
 coroutines          = "1.11.0"
 
+# Logging
+timber              = "5.0.1"
+
+# Debug tools
+leakcanary          = "2.14"
+
+# Code quality
+detekt              = "1.23.8"
+spotless            = "7.0.3"
+
 # Testing
 junit               = "4.13.2"
 junitExt            = "1.3.0"
@@ -82,6 +92,8 @@ retrofit                       = { group = "com.squareup.retrofit2",  name = "re
 retrofit-gson                  = { group = "com.squareup.retrofit2",  name = "converter-gson",                 version.ref = "retrofit" }
 okhttp                         = { group = "com.squareup.okhttp3",    name = "okhttp",                         version.ref = "okhttp" }
 okhttp-logging                 = { group = "com.squareup.okhttp3",    name = "logging-interceptor",            version.ref = "okhttp" }
+okhttp-mockwebserver           = { group = "com.squareup.okhttp3",    name = "mockwebserver",                  version.ref = "okhttp" }
+
 # Room
 room-runtime                   = { group = "androidx.room",           name = "room-runtime",                   version.ref = "room" }
 room-ktx                       = { group = "androidx.room",           name = "room-ktx",                       version.ref = "room" }
@@ -91,6 +103,12 @@ room-compiler                  = { group = "androidx.room",           name = "ro
 coroutines-core                = { group = "org.jetbrains.kotlinx",   name = "kotlinx-coroutines-core",        version.ref = "coroutines" }
 coroutines-android             = { group = "org.jetbrains.kotlinx",   name = "kotlinx-coroutines-android",     version.ref = "coroutines" }
 coroutines-test                = { group = "org.jetbrains.kotlinx",   name = "kotlinx-coroutines-test",        version.ref = "coroutines" }
+
+# Logging
+timber                         = { group = "com.jakewharton.timber",  name = "timber",                         version.ref = "timber" }
+
+# Debug tools
+leakcanary                     = { group = "com.squareup.leakcanary", name = "leakcanary-android",             version.ref = "leakcanary" }
 
 # Testing
 junit                          = { group = "junit",                   name = "junit",                          version.ref = "junit" }
@@ -110,3 +128,5 @@ hilt                 = { id = "com.google.dagger.hilt.android",  version.ref = "
 ksp                  = { id = "com.google.devtools.ksp",         version.ref = "ksp" }
 kotlin-compose       = { id = "org.jetbrains.kotlin.plugin.compose",       version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+detekt               = { id = "io.gitlab.arturbosch.detekt",     version.ref = "detekt" }
+spotless             = { id = "com.diffplug.spotless",           version.ref = "spotless" }

@@ -8,13 +8,10 @@ package com.tradingapp.common.result
  * - Avoid confusion with stdlib's sealed interface (different API surface).
  */
 sealed class Result<out T> {
-
     data class Success<T>(val data: T) : Result<T>()
 
-    data class Error(
-        val exception: Throwable,
-        val message: String = exception.localizedMessage ?: "Unknown error"
-    ) : Result<Nothing>()
+    data class Error(val exception: Throwable, val message: String = exception.localizedMessage ?: "Unknown error") :
+        Result<Nothing>()
 
     data object Loading : Result<Nothing>()
 }

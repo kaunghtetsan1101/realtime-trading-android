@@ -1,21 +1,29 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "com.tradingapp"
-    compileSdk = libs.versions.compileSdk.get().toInt()
+    compileSdk =
+        libs.versions.compileSdk
+            .get()
+            .toInt()
 
     defaultConfig {
         applicationId = "com.tradingapp"
-        minSdk        = libs.versions.minSdk.get().toInt()
-        targetSdk     = libs.versions.targetSdk.get().toInt()
-        versionCode   = 1
-        versionName   = "1.0.0"
+        minSdk =
+            libs.versions.minSdk
+                .get()
+                .toInt()
+        targetSdk =
+            libs.versions.targetSdk
+                .get()
+                .toInt()
+        versionCode = 1
+        versionName = "1.0.0"
     }
 
     buildTypes {
@@ -26,20 +34,21 @@ android {
     }
 
     buildFeatures { compose = true }
-
 }
 
 kotlin { jvmToolchain(17) }
 
 dependencies {
+    // Navigation graph — pulls in all three feature modules transitively
+    implementation(project(":core-navigation"))
+
+    // Infrastructure modules (Hilt component aggregation)
     implementation(project(":core-common"))
     implementation(project(":core-ui"))
     implementation(project(":core-network"))
     implementation(project(":core-database"))
     implementation(project(":domain"))
     implementation(project(":data"))
-    implementation(project(":feature-watchlist"))
-    implementation(project(":feature-market-detail"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -51,15 +60,11 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
 
-    implementation(libs.navigation3.runtime)
-    implementation(libs.navigation3.ui)
-    implementation(libs.lifecycle.viewmodel.nav3)
-    implementation(libs.hilt.lifecycle.viewmodel.compose)
-    implementation(libs.kotlinx.serialization.core)
-
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
+    implementation(libs.timber)
+    debugImplementation(libs.leakcanary)
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
     androidTestImplementation(platform(libs.compose.bom))

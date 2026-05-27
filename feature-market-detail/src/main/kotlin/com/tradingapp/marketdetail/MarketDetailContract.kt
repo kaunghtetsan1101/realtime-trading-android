@@ -11,15 +11,17 @@ import com.tradingapp.domain.model.Asset
  */
 
 data class MarketDetailState(
-    val asset: Asset?              = null,
-    val isLoading: Boolean         = true,
-    val error: String?             = null,
+    val asset: Asset? = null,
+    val isLoading: Boolean = true,
+    val error: String? = null,
     // Kept in memory for the live price ticker; chart data is served by TradingView WebView.
     val recentPrices: List<Double> = emptyList(),
+    val isOffline: Boolean = false,
 )
 
 sealed interface MarketDetailEvent {
-    data object Retry        : MarketDetailEvent
+    data object Retry : MarketDetailEvent
+
     data object NavigateBack : MarketDetailEvent
 }
 
