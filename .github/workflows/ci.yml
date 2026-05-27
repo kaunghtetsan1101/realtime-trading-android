@@ -1,27 +1,89 @@
-name: CI
-
 on:
     push:
         branches: [main]
     pull_request:
         branches: [main]
 
+# Cancel in-progress runs for the same branch on new push
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
+    # ── Build ──────────────────────────────────────────────────────────────────
     build:
         name: Build
         runs-on: ubuntu-latest
-
         steps:
             - uses: actions/checkout@v4
 
-            -   name: Set up JDK 17
-                uses: actions/setup-java@v4
-                with:
-                    java-version: '17'
-                    distribution: temurin
+            - uses: actions/setup-java@v4
+              with:
+                  java-version: '21'
+                  distribution: temurin
 
-            - name: Make Gradle wrapper executable
-              run: chmod +x ./gradlew
+            # Caches Gradle wrapper, dependencies, and build outputs automatically
+            - uses: gradle/actions/setup-gradle@v4
 
-            -   name: Build debug APK
-                run: ./gradlew assembleDebug --stacktrace --info --no-daemon
+            - name: Assemble debug APK
+              run: ./gradlew assembleDebug --stacktrace
+
+    # ── Unit Tests ─────────────────────────────────────────────────────────────
+    test:
+        name: Unit Tests
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-java@v4
+              with:
+                  java-version: '21'
+                  distribution: temurin
+
+            - uses: gradle/actions/setup-gradle@v4
+
+            - name: Run unit tests
+              run: ./gradlew test
+
+            - name: Upload test reports
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: test-reports
+                  path: '**/build/reports/tests/'
+                  retention-days: 7
+
+    # ── Static Analysis ────────────────────────────────────────────────────────
+    detekt:
+        name: Detekt
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-java@v4
+              with:
+                  java-version: '21'
+                  distribution: temurin
+
+            - uses: gradle/actions/setup-gradle@v4
+
+            - name: Run detekt
+              run: ./gradlew detekt
+
+    # ── Formatting ─────────────────────────────────────────────────────────────
+    spotless:
+        name: Spotless (ktlint)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-java@v4
+              with:
+                  java-version: '21'
+                  distribution: temurin
+
+            - uses: gradle/actions/setup-gradle@v4
+
+            - name: Check formatting
+              run: ./gradlew spotlessCheck
+
