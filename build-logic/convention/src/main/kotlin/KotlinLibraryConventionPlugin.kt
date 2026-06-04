@@ -11,7 +11,7 @@ class KotlinLibraryConventionPlugin : Plugin<Project> {
         with(target) {
             pluginManager.apply("org.jetbrains.kotlin.jvm")
             extensions.configure<KotlinJvmProjectExtension> {
-                jvmToolchain(17)
+                jvmToolchain(21)
             }
             val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
             dependencies {

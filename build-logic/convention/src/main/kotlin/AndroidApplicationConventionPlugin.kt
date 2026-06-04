@@ -19,7 +19,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                 buildFeatures.buildConfig = true
             }
             extensions.configure<KotlinAndroidProjectExtension> {
-                jvmToolchain(17)
+                jvmToolchain(21)
             }
             dependencies {
                 "implementation"(libs.findLibrary("androidx-core-ktx").get())

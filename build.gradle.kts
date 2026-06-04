@@ -1,4 +1,13 @@
 // Root build file — module configuration lives in each module's build.gradle.kts.
+
+// Hilt 2.59 bundles kotlin-metadata-jvm that tops out at metadata 2.3.0;
+// Kotlin 2.4.0 generates metadata 2.4.0, so we force a compatible version.
+allprojects {
+    configurations.all {
+        resolutionStrategy.force("org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.0")
+    }
+}
+
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.android.library) apply false

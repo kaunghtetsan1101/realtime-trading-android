@@ -14,7 +14,7 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                 defaultConfig.minSdk = libs.findVersion("minSdk").get().requiredVersion.toInt()
             }
             extensions.configure<KotlinAndroidProjectExtension> {
-                jvmToolchain(17)
+                jvmToolchain(21)
             }
         }
     }

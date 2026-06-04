@@ -25,9 +25,9 @@ android {
 }
 
 dependencies {
-    implementation("androidx.test.ext:junit:1.3.0")
-    implementation("androidx.test.uiautomator:uiautomator:2.3.0")
-    implementation("androidx.benchmark:benchmark-macro-junit4:1.5.0-alpha01")
+    implementation(libs.androidx.junit.v130)
+    implementation(libs.uiautomator)
+    implementation(libs.androidx.benchmark.macro.junit4.v150alpha06)
 }
 
 androidComponents {
