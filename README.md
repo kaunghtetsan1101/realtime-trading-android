@@ -33,7 +33,7 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 | Logging | Timber |
 | Static analysis | detekt |
 | Formatting | Spotless + ktlint |
-| Build | Gradle multi-module + Convention Plugins + Version Catalog |
+| Build | Gradle 9.4.1 + AGP 9.2.1 + Convention Plugins + Version Catalog |
 | Testing | JUnit + MockK + Turbine + MockWebServer |
 | Debug | LeakCanary |
 | CI | GitHub Actions |
@@ -195,9 +195,9 @@ Two macrobenchmarks compare `CompilationMode.None()` (JIT only) vs `CompilationM
 ## Setup
 
 ### Prerequisites
-- Android Studio Ladybug (2024.2) or newer
-- JDK 17
-- Android SDK 37
+- Android Studio Meerkat (2025.1) or newer
+- JDK 21
+- Android SDK 36
 
 ### Clone and open
 ```bash
@@ -307,6 +307,8 @@ significantly faster than cold builds.
 | Dynamic WS reconnect | `MutableStateFlow<String?> + flatMapLatest` | URL changes after sync automatically cancel old WS and open new one |
 | Navigation extraction | `core-navigation` module | Feature modules have zero knowledge of routes; `app` only depends on `core-navigation` |
 | Convention plugins | `build-logic` composite build | ~150 lines of duplicated Gradle config replaced with 6 composable plugins; same approach as Now in Android |
+| JVM toolchain | 21 (via `gradle-daemon-jvm.properties`) | Replaces the foojay settings plugin; toolchain URLs resolved once at daemon start rather than on every project sync |
+| Kotlin 2.4 / Hilt metadata fix | `resolutionStrategy.force("kotlin-metadata-jvm:2.4.0")` | Hilt 2.59 bundles `kotlin-metadata-jvm` capped at 2.3.0; forcing 2.4.0 in root `allprojects` resolves the version conflict without waiting for a Hilt release |
 | detekt at root | Single task scans all modules | Simpler than per-module config; one CI command covers all modules |
 | No detekt-formatting | Spotless handles formatting | Avoids duplicate ktlint execution and conflicting rule sets |
 | Timber debug-only | `if (BuildConfig.DEBUG)` guard | Release APK has zero logging cost; no stripping step needed |
