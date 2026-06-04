@@ -14,6 +14,7 @@ dependencies {
     implementation(project(":domain"))
     implementation(libs.findLibrary("coroutines-core").get())
     implementation(libs.findLibrary("timber").get())
+    implementation(libs.findLibrary("room-ktx").get())
 
     testImplementation(libs.findLibrary("junit4").get())
     testImplementation(libs.findLibrary("coroutines-test").get())

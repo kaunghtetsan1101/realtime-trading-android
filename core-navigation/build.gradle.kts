@@ -12,6 +12,7 @@ dependencies {
     implementation(project(":feature-watchlist"))
     implementation(project(":feature-market-detail"))
     implementation(project(":feature-search"))
+    implementation(project(":feature-trading"))
 
     implementation(libs.findLibrary("androidx-lifecycle-runtime-ktx").get())
 

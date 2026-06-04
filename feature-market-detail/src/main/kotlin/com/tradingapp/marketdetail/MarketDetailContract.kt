@@ -21,10 +21,11 @@ data class MarketDetailState(
 
 sealed interface MarketDetailEvent {
     data object Retry : MarketDetailEvent
-
     data object NavigateBack : MarketDetailEvent
+    data object Trade : MarketDetailEvent
 }
 
 sealed interface MarketDetailEffect {
     data object NavigateBack : MarketDetailEffect
+    data class NavigateToTrade(val symbol: String) : MarketDetailEffect
 }

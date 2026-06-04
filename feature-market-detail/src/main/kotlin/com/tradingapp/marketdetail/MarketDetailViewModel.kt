@@ -55,6 +55,7 @@ class MarketDetailViewModel @AssistedInject constructor(
         when (event) {
             MarketDetailEvent.Retry -> load()
             MarketDetailEvent.NavigateBack -> sendEffect(MarketDetailEffect.NavigateBack)
+            MarketDetailEvent.Trade -> sendEffect(MarketDetailEffect.NavigateToTrade(symbol))
         }
     }
 

@@ -21,3 +21,9 @@ data object RouteSearch
 
 @Serializable
 data object RouteSettings
+
+@Serializable
+data class RouteTrading(val symbol: String)
+
+@Serializable
+data object RoutePortfolio

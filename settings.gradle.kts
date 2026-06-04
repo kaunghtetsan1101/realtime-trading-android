@@ -28,6 +28,7 @@ include(":data")
 include(":feature-watchlist")
 include(":feature-market-detail")
 include(":feature-search")
+include(":feature-trading")
 include(":baseline-profile")
 include(":macrobenchmark")
 

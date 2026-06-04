@@ -9,6 +9,9 @@ import androidx.navigation3.ui.NavDisplay
 import com.tradingapp.marketdetail.MarketDetailScreen
 import com.tradingapp.marketdetail.MarketDetailViewModel
 import com.tradingapp.search.SearchScreen
+import com.tradingapp.trading.PortfolioScreen
+import com.tradingapp.trading.TradingScreen
+import com.tradingapp.trading.TradingViewModel
 import com.tradingapp.watchlist.WatchlistScreen
 
 @Composable
@@ -29,6 +32,7 @@ fun AppNavGraph() {
                 WatchlistScreen(
                     onAssetClick = { symbol -> backStack.add(RouteMarketDetail(symbol)) },
                     onSearchClick = { backStack.add(RouteSearch) },
+                    onPortfolioClick = { backStack.add(RoutePortfolio) },
                 )
             }
 
@@ -38,6 +42,7 @@ fun AppNavGraph() {
                 )
                 MarketDetailScreen(
                     onNavigateBack = { backStack.removeLastOrNull() },
+                    onNavigateToTrade = { symbol -> backStack.add(RouteTrading(symbol)) },
                     viewModel = viewModel,
                 )
             }
@@ -49,7 +54,23 @@ fun AppNavGraph() {
                 )
             }
 
-            // Placeholder — implemented in a future milestone
+            entry<RouteTrading> { key ->
+                val viewModel = hiltViewModel<TradingViewModel, TradingViewModel.Factory>(
+                    creationCallback = { factory -> factory.create(key.symbol) },
+                )
+                TradingScreen(
+                    onNavigateBack = { backStack.removeLastOrNull() },
+                    viewModel = viewModel,
+                )
+            }
+
+            entry<RoutePortfolio> {
+                PortfolioScreen(
+                    onNavigateBack = { backStack.removeLastOrNull() },
+                    onNavigateToTrade = { symbol -> backStack.add(RouteTrading(symbol)) },
+                )
+            }
+
             entry<RouteSettings> { }
         },
     )

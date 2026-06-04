@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -45,13 +46,18 @@ import com.tradingapp.ui.theme.TradingAppTheme
 // viewModel is supplied by AppNavGraph via hiltViewModel(creationCallback = ...) — not a default param
 // because the Factory needs the symbol from the Nav3 route key.
 @Composable
-fun MarketDetailScreen(onNavigateBack: () -> Unit, viewModel: MarketDetailViewModel) {
+fun MarketDetailScreen(
+    onNavigateBack: () -> Unit,
+    onNavigateToTrade: (String) -> Unit,
+    viewModel: MarketDetailViewModel,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
             when (effect) {
                 MarketDetailEffect.NavigateBack -> onNavigateBack()
+                is MarketDetailEffect.NavigateToTrade -> onNavigateToTrade(effect.symbol)
             }
         }
     }
@@ -79,6 +85,11 @@ private fun MarketDetailContent(state: MarketDetailState, onEvent: (MarketDetail
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Navigate back",
                         )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { onEvent(MarketDetailEvent.Trade) }) {
+                        Icon(Icons.Default.SwapHoriz, contentDescription = "Trade ${state.asset?.symbol ?: ""}")
                     }
                 },
                 scrollBehavior = scrollBehavior,
