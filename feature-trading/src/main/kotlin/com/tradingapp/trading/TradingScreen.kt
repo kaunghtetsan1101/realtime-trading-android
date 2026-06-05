@@ -59,10 +59,7 @@ import com.tradingapp.ui.components.PrimaryActionButton
 import com.tradingapp.ui.theme.TradingAppTheme
 
 @Composable
-fun TradingScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: TradingViewModel,
-) {
+fun TradingScreen(onNavigateBack: () -> Unit, viewModel: TradingViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHost = remember { SnackbarHostState() }
 
@@ -84,11 +81,7 @@ fun TradingScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TradingContent(
-    state: TradingState,
-    snackbarHost: SnackbarHostState,
-    onEvent: (TradingEvent) -> Unit,
-) {
+private fun TradingContent(state: TradingState, snackbarHost: SnackbarHostState, onEvent: (TradingEvent) -> Unit) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val title = if (state.assetName.isNotBlank()) "${state.symbol} · Trade" else "Trade"
 
@@ -111,7 +104,7 @@ private fun TradingContent(
             state.isLoading && state.currentPrice == 0.0 -> LoadingIndicator(Modifier.padding(padding))
             state.error != null && state.currentPrice == 0.0 -> ErrorState(
                 message = state.error,
-                onRetry = null,
+                onRetry = { onEvent(TradingEvent.Retry) },
                 modifier = Modifier.padding(padding),
             )
             else -> TradingBody(
@@ -134,11 +127,7 @@ private fun TradingContent(
 }
 
 @Composable
-private fun TradingBody(
-    state: TradingState,
-    onEvent: (TradingEvent) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun TradingBody(state: TradingState, onEvent: (TradingEvent) -> Unit, modifier: Modifier = Modifier) {
     val quantity = state.quantityInput.toDoubleOrNull() ?: 0.0
     val orderTotal = quantity * state.currentPrice
     val isQuantityValid = state.quantityInput.isNotBlank() && state.validationError == null && quantity > 0.0
@@ -216,8 +205,11 @@ private fun TradeSideSelector(selected: OrderSide, onSelect: (OrderSide) -> Unit
             onClick = { onSelect(OrderSide.BUY) },
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (buySelected) PriceUp else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (buySelected) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                contentColor = if (buySelected) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             ),
             modifier = Modifier.weight(1f),
         ) { Text("BUY", fontWeight = FontWeight.Bold) }
@@ -226,8 +218,11 @@ private fun TradeSideSelector(selected: OrderSide, onSelect: (OrderSide) -> Unit
             onClick = { onSelect(OrderSide.SELL) },
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (!buySelected) PriceDown else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (!buySelected) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                contentColor = if (!buySelected) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             ),
             modifier = Modifier.weight(1f),
         ) { Text("SELL", fontWeight = FontWeight.Bold) }
@@ -235,12 +230,7 @@ private fun TradeSideSelector(selected: OrderSide, onSelect: (OrderSide) -> Unit
 }
 
 @Composable
-private fun QuantityInput(
-    value: String,
-    symbol: String,
-    error: ValidationError?,
-    onValueChange: (String) -> Unit,
-) {
+private fun QuantityInput(value: String, symbol: String, error: ValidationError?, onValueChange: (String) -> Unit) {
     val errorMessage = error?.toMessage()
     OutlinedTextField(
         value = value,
@@ -295,13 +285,7 @@ private fun QuickFillRow(onFill: (Double) -> Unit) {
 }
 
 @Composable
-private fun OrderSummaryCard(
-    side: OrderSide,
-    quantity: Double,
-    price: Double,
-    total: Double,
-    symbol: String,
-) {
+private fun OrderSummaryCard(side: OrderSide, quantity: Double, price: Double, total: Double, symbol: String) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = Modifier.fillMaxWidth(),

@@ -6,7 +6,6 @@ import com.tradingapp.domain.model.Asset
 import com.tradingapp.domain.model.Order
 import com.tradingapp.domain.model.OrderSide
 import com.tradingapp.domain.model.OrderStatus
-import com.tradingapp.domain.model.Position
 import com.tradingapp.domain.model.ValidationError
 import com.tradingapp.domain.model.ValidationResult
 import com.tradingapp.domain.repository.TradeRepository
@@ -59,10 +58,14 @@ class TradingViewModelTest {
     }
 
     @Before
-    fun setUp() { Dispatchers.setMain(testDispatcher) }
+    fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+    }
 
     @After
-    fun tearDown() { Dispatchers.resetMain() }
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun `initial state has BUY side and empty quantity`() = runTest {

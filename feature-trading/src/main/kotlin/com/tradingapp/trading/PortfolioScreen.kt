@@ -45,6 +45,7 @@ import com.tradingapp.domain.model.OrderStatus
 import com.tradingapp.domain.model.Portfolio
 import com.tradingapp.domain.model.Position
 import com.tradingapp.ui.components.EmptyState
+import com.tradingapp.ui.components.ErrorState
 import com.tradingapp.ui.components.LoadingIndicator
 import com.tradingapp.ui.components.PercentageBadge
 import com.tradingapp.ui.components.SectionHeader
@@ -92,10 +93,14 @@ private fun PortfolioContent(state: PortfolioState, onEvent: (PortfolioEvent) ->
             )
         },
     ) { padding ->
-        if (state.isLoading && state.portfolio == null) {
-            LoadingIndicator(Modifier.padding(padding))
-        } else {
-            PortfolioBody(
+        when {
+            state.isLoading && state.portfolio == null -> LoadingIndicator(Modifier.padding(padding))
+            state.error != null && state.portfolio == null -> ErrorState(
+                message = state.error,
+                onRetry = { onEvent(PortfolioEvent.Retry) },
+                modifier = Modifier.padding(padding),
+            )
+            else -> PortfolioBody(
                 state = state,
                 onEvent = onEvent,
                 modifier = Modifier.padding(padding),
@@ -105,11 +110,7 @@ private fun PortfolioContent(state: PortfolioState, onEvent: (PortfolioEvent) ->
 }
 
 @Composable
-private fun PortfolioBody(
-    state: PortfolioState,
-    onEvent: (PortfolioEvent) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun PortfolioBody(state: PortfolioState, onEvent: (PortfolioEvent) -> Unit, modifier: Modifier = Modifier) {
     val portfolio = state.portfolio
     LazyColumn(modifier = modifier.fillMaxSize()) {
         if (portfolio != null) {
@@ -243,11 +244,7 @@ private fun CashBalanceCard(balance: Double, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun PositionRow(
-    position: Position,
-    onTradeClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun PositionRow(position: Position, onTradeClick: () -> Unit, modifier: Modifier = Modifier) {
     val pnlColor: Color = if (position.unrealizedPnL >= 0.0) PriceUp else PriceDown
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -334,8 +331,7 @@ private fun OrderHistoryRow(order: Order, modifier: Modifier = Modifier) {
 
 private fun formatUsd(amount: Double): String = "${"$"}${"%.2f".format(amount)}"
 
-private fun formatTimestamp(ms: Long): String =
-    SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(ms))
+private fun formatTimestamp(ms: Long): String = SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(ms))
 
 // --- Previews ---
 

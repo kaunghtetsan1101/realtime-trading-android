@@ -26,6 +26,7 @@ sealed interface TradingEvent {
     data object ReviewOrder : TradingEvent
     data object DismissReview : TradingEvent
     data object ConfirmOrder : TradingEvent
+    data object Retry : TradingEvent
     data object NavigateBack : TradingEvent
 }
 

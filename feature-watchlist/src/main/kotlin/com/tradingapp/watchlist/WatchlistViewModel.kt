@@ -2,6 +2,7 @@ package com.tradingapp.watchlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tradingapp.common.error.ErrorMapper
 import com.tradingapp.common.result.Result
 import com.tradingapp.domain.usecase.GetWatchlistUseCase
 import com.tradingapp.domain.usecase.ObserveNetworkStatusUseCase
@@ -66,7 +67,9 @@ constructor(
                                 error = null,
                             )
                         }
-                    is Result.Error -> stateMutable.update { it.copy(isLoading = false, error = result.message) }
+                    is Result.Error -> stateMutable.update {
+                        it.copy(isLoading = false, error = ErrorMapper.toUserMessage(result.exception))
+                    }
                 }
             }.launchIn(viewModelScope)
     }
@@ -75,7 +78,7 @@ constructor(
         viewModelScope.launch {
             syncAssets().onFailure { error ->
                 // Non-fatal: show snackbar but keep cached data visible
-                sendEffect(WatchlistEffect.ShowSnackbar("Sync failed: ${error.localizedMessage}"))
+                sendEffect(WatchlistEffect.ShowSnackbar(ErrorMapper.toUserMessage(error)))
             }
         }
     }

@@ -33,6 +33,5 @@ include(":baseline-profile")
 include(":macrobenchmark")
 
 include(":core-designsystem")
-
-// Future modules — uncomment when ready:
-// include(":feature-settings")
+include(":core-datastore")
+include(":feature-settings")

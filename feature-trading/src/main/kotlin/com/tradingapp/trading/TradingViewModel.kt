@@ -2,6 +2,7 @@ package com.tradingapp.trading
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tradingapp.common.error.ErrorMapper
 import com.tradingapp.common.result.Result
 import com.tradingapp.domain.model.OrderSide
 import com.tradingapp.domain.model.ValidationError
@@ -15,6 +16,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,6 +48,8 @@ class TradingViewModel @AssistedInject constructor(
     private val effectsMutable = Channel<TradingEffect>(Channel.BUFFERED)
     val effects = effectsMutable.receiveAsFlow()
 
+    private var loadJob: Job? = null
+
     init {
         loadAsset()
         observeLivePrice()
@@ -61,6 +65,7 @@ class TradingViewModel @AssistedInject constructor(
             TradingEvent.ReviewOrder -> stateMutable.update { it.copy(isReviewVisible = true) }
             TradingEvent.DismissReview -> stateMutable.update { it.copy(isReviewVisible = false) }
             TradingEvent.ConfirmOrder -> onConfirmOrder()
+            TradingEvent.Retry -> loadAsset()
             TradingEvent.NavigateBack -> sendEffect(TradingEffect.NavigateBack)
         }
     }
@@ -68,7 +73,9 @@ class TradingViewModel @AssistedInject constructor(
     // --- Private ---
 
     private fun loadAsset() {
-        getAssetDetail(symbol)
+        loadJob?.cancel()
+        stateMutable.update { it.copy(isLoading = true, error = null) }
+        loadJob = getAssetDetail(symbol)
             .onEach { result ->
                 when (result) {
                     is Result.Loading -> stateMutable.update { it.copy(isLoading = true) }
@@ -84,7 +91,7 @@ class TradingViewModel @AssistedInject constructor(
                         }
                     }
                     is Result.Error -> stateMutable.update {
-                        it.copy(isLoading = false, error = result.message)
+                        it.copy(isLoading = false, error = ErrorMapper.toUserMessage(result.exception))
                     }
                 }
             }
@@ -117,8 +124,11 @@ class TradingViewModel @AssistedInject constructor(
         val sanitized = input.filter { it.isDigit() || it == '.' }
             .let { s ->
                 val dotIndex = s.indexOf('.')
-                if (dotIndex == -1) s
-                else s.substring(0, dotIndex + 1) + s.substring(dotIndex + 1).filter { it.isDigit() }
+                if (dotIndex == -1) {
+                    s
+                } else {
+                    s.substring(0, dotIndex + 1) + s.substring(dotIndex + 1).filter { it.isDigit() }
+                }
             }
         updateAndValidate { it.copy(quantityInput = sanitized) }
     }
@@ -150,7 +160,7 @@ class TradingViewModel @AssistedInject constructor(
                 },
                 onFailure = { error ->
                     stateMutable.update { it.copy(isPlacingOrder = false, isReviewVisible = false) }
-                    sendEffect(TradingEffect.ShowSnackbar("Order failed: ${error.message}"))
+                    sendEffect(TradingEffect.ShowSnackbar("Order failed: ${ErrorMapper.toUserMessage(error)}"))
                 },
             )
         }
@@ -185,7 +195,6 @@ class TradingViewModel @AssistedInject constructor(
     }
 
     companion object {
-        fun formatQuantity(qty: Double): String =
-            if (qty <= 0.0) "0" else "%.8f".format(qty).trimEnd('0').trimEnd('.')
+        fun formatQuantity(qty: Double): String = if (qty <= 0.0) "0" else "%.8f".format(qty).trimEnd('0').trimEnd('.')
     }
 }

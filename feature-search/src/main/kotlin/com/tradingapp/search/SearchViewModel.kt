@@ -2,6 +2,7 @@ package com.tradingapp.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tradingapp.common.error.ErrorMapper
 import com.tradingapp.common.result.Result
 import com.tradingapp.domain.model.Asset
 import com.tradingapp.domain.usecase.GetWatchlistUseCase
@@ -62,7 +63,10 @@ class SearchViewModel @Inject constructor(
                 stateMutable.update { s ->
                     when (result) {
                         is Result.Loading -> s.copy(isLoading = true, error = null)
-                        is Result.Error -> s.copy(isLoading = false, error = result.message)
+                        is Result.Error -> s.copy(
+                            isLoading = false,
+                            error = ErrorMapper.toUserMessage(result.exception),
+                        )
                         is Result.Success -> s.copy(
                             isLoading = false,
                             error = null,

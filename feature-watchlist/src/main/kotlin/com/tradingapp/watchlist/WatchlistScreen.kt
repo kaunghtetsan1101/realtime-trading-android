@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -40,6 +41,7 @@ fun WatchlistScreen(
     onAssetClick: (String) -> Unit,
     onSearchClick: () -> Unit,
     onPortfolioClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     viewModel: WatchlistViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -60,6 +62,7 @@ fun WatchlistScreen(
         onEvent = viewModel::onEvent,
         onSearchClick = onSearchClick,
         onPortfolioClick = onPortfolioClick,
+        onSettingsClick = onSettingsClick,
     )
 }
 
@@ -71,6 +74,7 @@ private fun WatchlistContent(
     onEvent: (WatchlistEvent) -> Unit,
     onSearchClick: () -> Unit,
     onPortfolioClick: () -> Unit,
+    onSettingsClick: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -83,6 +87,9 @@ private fun WatchlistContent(
                         }
                         IconButton(onClick = onSearchClick) {
                             Icon(Icons.Default.Search, contentDescription = "Search markets")
+                        }
+                        IconButton(onClick = onSettingsClick) {
+                            Icon(Icons.Default.Settings, contentDescription = "Open settings")
                         }
                     },
                 )
@@ -135,19 +142,18 @@ private fun AssetList(assets: List<Asset>, onEvent: (WatchlistEvent) -> Unit, mo
 
 // --- Previews ---
 
-private fun fakeAsset(symbol: String, price: Double, pct: Double, fav: Boolean = false) =
-    Asset(
-        symbol = symbol,
-        name = symbol,
-        currentPrice = price,
-        priceChange24h = price * pct / 100,
-        priceChangePct24h = pct,
-        marketCap = 1_000_000_000.0,
-        volume24h = 50_000_000.0,
-        logoUrl = null,
-        isFavorite = fav,
-        lastUpdated = System.currentTimeMillis(),
-    )
+private fun fakeAsset(symbol: String, price: Double, pct: Double, fav: Boolean = false) = Asset(
+    symbol = symbol,
+    name = symbol,
+    currentPrice = price,
+    priceChange24h = price * pct / 100,
+    priceChangePct24h = pct,
+    marketCap = 1_000_000_000.0,
+    volume24h = 50_000_000.0,
+    logoUrl = null,
+    isFavorite = fav,
+    lastUpdated = System.currentTimeMillis(),
+)
 
 @Preview(name = "Light", showBackground = true)
 @Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
@@ -167,6 +173,7 @@ private fun WatchlistPreview() {
             onEvent = {},
             onSearchClick = {},
             onPortfolioClick = {},
+            onSettingsClick = {},
         )
     }
 }
@@ -174,7 +181,9 @@ private fun WatchlistPreview() {
 @Preview(name = "Light — loading", showBackground = true)
 @Composable
 private fun WatchlistLoadingPreview() {
-    TradingAppTheme { WatchlistContent(WatchlistState(), remember { SnackbarHostState() }, {}, {}, {}) }
+    TradingAppTheme {
+        WatchlistContent(WatchlistState(), remember { SnackbarHostState() }, {}, {}, {}, {})
+    }
 }
 
 @Preview(name = "Light — error", showBackground = true)
@@ -182,8 +191,9 @@ private fun WatchlistLoadingPreview() {
 private fun WatchlistErrorPreview() {
     TradingAppTheme {
         WatchlistContent(
-            WatchlistState(isLoading = false, error = "Network unavailable"),
+            WatchlistState(isLoading = false, error = "No internet connection. Showing cached data."),
             remember { SnackbarHostState() },
+            {},
             {},
             {},
             {},

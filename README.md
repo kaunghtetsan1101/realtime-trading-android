@@ -17,13 +17,14 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 | M7 ──► Design System + Dark Mode | ✅ Done |
 | M8 ──► Search | ✅ Done |
 | M9 ──► Trading Screen + Portfolio | ✅ Done |
-| M10 ──► Settings + Polish | Pending |
+| M10 ──► Settings + Polish | ✅ Done |
 
 ## Tech Stack
 
 | Category | Library |
 |----------|---------|
 | Language | Kotlin |
+| Preferences | DataStore Preferences |
 | UI | Jetpack Compose + Material3 |
 | Architecture | MVI + Clean Architecture |
 | DI | Hilt |
@@ -62,6 +63,9 @@ realtime-trading-android/
 ├── feature-market-detail/  # Asset detail screen — live price ticker, 24h stats
 ├── feature-search/         # Search screen — in-memory filter/sort, debounced query, MVI
 ├── feature-trading/        # TradingScreen (BUY/SELL), PortfolioScreen (P&L, order history)
+├── feature-settings/       # SettingsScreen — theme mode, verbose logging, app version
+│
+├── core-datastore/         # DataStore Preferences — ThemeMode + verbose logging persistence
 │
 ├── baseline-profile/       # Generates Baseline Profile (startup + watchlist scroll)
 └── macrobenchmark/         # Macrobenchmarks: cold startup and watchlist frame timing
@@ -72,7 +76,7 @@ realtime-trading-android/
 ```
 app            ──► core-navigation, core-ui, core-common, core-network,
                    core-database, domain, data   (Hilt component aggregation)
-core-navigation──► feature-watchlist, feature-market-detail, feature-search, feature-trading
+core-navigation──► feature-watchlist, feature-market-detail, feature-search, feature-trading, feature-settings
 feature-*      ──► domain, core-ui, core-common
 data           ──► domain, core-network, core-database, core-common
 domain         ──► core-common   (no Android imports)
@@ -204,6 +208,55 @@ Every component has paired `@Preview` annotations for both light and dark to cat
 - `ValidateOrderUseCaseTest` — all BUY/SELL error paths + happy paths
 - `PlaceOrderUseCaseTest` — correct order construction, failure propagation, unique ID generation
 - `TradingViewModelTest` — state transitions, real-time validation, order effects
+
+## Settings & Polish (M10)
+
+### Settings screen
+
+Navigated from the gear icon in the Watchlist top bar.
+
+| Section | Contents |
+|---------|----------|
+| Appearance | Theme mode selector — System / Light / Dark (`SingleChoiceSegmentedButtonRow`) |
+| Developer Options | Verbose Logging toggle — controls Timber planting at next app start |
+| About | App version name, app description |
+
+Theme preference is persisted in `core-datastore` (Preferences DataStore). `MainActivity` reads the stored `ThemeMode` as a `collectAsStateWithLifecycle` Flow and passes the resolved `Boolean` to `TradingAppTheme` — no flash workaround needed for a portfolio app.
+
+### Error handling
+
+`ErrorMapper` (in `core-common`) provides user-friendly messages for all network exceptions:
+
+| Exception | Message |
+|-----------|---------|
+| `UnknownHostException` | "No internet connection. Showing cached data." |
+| `SocketTimeoutException` | "Request timed out. Please retry." |
+| `IOException` | "Connection error. Please retry." |
+| Other | `localizedMessage` or "An unexpected error occurred." |
+
+All ViewModels (`Watchlist`, `MarketDetail`, `Search`, `Trading`, `Portfolio`) route errors through `ErrorMapper`. Raw exception messages no longer reach the UI.
+
+### Retry completeness
+
+| Screen | Error retry |
+|--------|------------|
+| Watchlist | ✅ Retry button resyncs assets |
+| MarketDetail | ✅ Retry button reloads asset |
+| Search | ✅ Retry button re-triggers combine |
+| Trading | ✅ Added — was missing (`TradingEvent.Retry`) |
+| Portfolio | ✅ Added — `PortfolioEvent.Retry` + `.catch {}` on Room flows |
+
+### New modules
+
+| Module | Type | Purpose |
+|--------|------|---------|
+| `core-datastore` | `android.library` + Hilt | Preferences DataStore — `ThemeMode`, verbose logging |
+| `feature-settings` | `android.feature` | `SettingsScreen` + `SettingsViewModel` |
+
+### Test coverage added (M10)
+
+- `ErrorMapperTest` (6 cases) — mapping for all exception types including edge cases
+- `SettingsViewModelTest` (7 cases) — theme/logging state, reactive updates, NavigateBack effect
 
 ## Performance
 
@@ -363,3 +416,8 @@ significantly faster than cold builds.
 | `ValidateOrderUseCase` is pure | No I/O, no coroutine | Enables synchronous real-time validation on every keystroke without suspending the ViewModel |
 | `TradingViewModel` assisted inject | `@AssistedInject` + `symbol` param | Passes the asset symbol at runtime without a global state holder or saved-state workaround |
 | Portfolio live P&L | Derived in `GetPortfolioUseCase` | Combines Room positions + live price flow to compute unrealised P&L reactively; no extra DB column |
+| Theme persistence | Preferences DataStore in `core-datastore` | Lightweight KV store; no Proto schema required for two boolean/enum preferences |
+| Theme wiring in `MainActivity` | `collectAsStateWithLifecycle` + `isSystemInDarkTheme()` | Theme resolves inside `setContent` — no Activity recreation required when user picks System |
+| `ErrorMapper` in `core-common` | Maps `IOException` hierarchy | Pure JVM — no Retrofit dependency in core-common; HttpException handling stays in data layer |
+| `AppInfo` provided by `app` module | `@Provides @Singleton` in `AppInfoModule` | Only the `app` module knows `BuildConfig.VERSION_NAME`; injected into `SettingsViewModel` via Hilt |
+| PortfolioViewModel retry | `Job` per flow + `.catch {}` | Room flows don't normally throw, but `.catch` is the safety net; Job tracking prevents duplicate observers on retry |

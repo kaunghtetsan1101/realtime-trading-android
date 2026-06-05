@@ -21,7 +21,7 @@ android {
 }
 
 dependencies {
-    // Navigation graph — pulls in all three feature modules transitively
+    // Navigation graph — pulls in all feature modules transitively
     implementation(project(":core-navigation"))
 
     // Infrastructure modules (Hilt component aggregation)
@@ -29,6 +29,7 @@ dependencies {
     implementation(project(":core-ui"))
     implementation(project(":core-network"))
     implementation(project(":core-database"))
+    implementation(project(":core-datastore"))
     implementation(project(":domain"))
     implementation(project(":data"))
 }

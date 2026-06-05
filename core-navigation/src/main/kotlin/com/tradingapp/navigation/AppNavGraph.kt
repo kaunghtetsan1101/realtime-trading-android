@@ -9,6 +9,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.tradingapp.marketdetail.MarketDetailScreen
 import com.tradingapp.marketdetail.MarketDetailViewModel
 import com.tradingapp.search.SearchScreen
+import com.tradingapp.settings.SettingsScreen
 import com.tradingapp.trading.PortfolioScreen
 import com.tradingapp.trading.TradingScreen
 import com.tradingapp.trading.TradingViewModel
@@ -16,7 +17,6 @@ import com.tradingapp.watchlist.WatchlistScreen
 
 @Composable
 fun AppNavGraph() {
-    // ViewModel is retained across configuration changes; back stack survives rotation.
     val navViewModel: NavigationViewModel = hiltViewModel()
     val backStack = navViewModel.backStack
 
@@ -33,6 +33,7 @@ fun AppNavGraph() {
                     onAssetClick = { symbol -> backStack.add(RouteMarketDetail(symbol)) },
                     onSearchClick = { backStack.add(RouteSearch) },
                     onPortfolioClick = { backStack.add(RoutePortfolio) },
+                    onSettingsClick = { backStack.add(RouteSettings) },
                 )
             }
 
@@ -71,7 +72,9 @@ fun AppNavGraph() {
                 )
             }
 
-            entry<RouteSettings> { }
+            entry<RouteSettings> {
+                SettingsScreen(onNavigateBack = { backStack.removeLastOrNull() })
+            }
         },
     )
 }

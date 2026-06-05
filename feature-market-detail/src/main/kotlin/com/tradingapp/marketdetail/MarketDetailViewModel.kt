@@ -2,6 +2,7 @@ package com.tradingapp.marketdetail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tradingapp.common.error.ErrorMapper
 import com.tradingapp.common.result.Result
 import com.tradingapp.domain.usecase.GetAssetDetailUseCase
 import com.tradingapp.domain.usecase.ObserveNetworkStatusUseCase
@@ -71,7 +72,9 @@ class MarketDetailViewModel @AssistedInject constructor(
                     is Result.Success -> stateMutable.update {
                         it.copy(isLoading = false, asset = result.data, error = null)
                     }
-                    is Result.Error -> stateMutable.update { it.copy(isLoading = false, error = result.message) }
+                    is Result.Error -> stateMutable.update {
+                        it.copy(isLoading = false, error = ErrorMapper.toUserMessage(result.exception))
+                    }
                 }
             }
             .launchIn(viewModelScope)

@@ -13,6 +13,7 @@ data class PortfolioState(
 sealed interface PortfolioEvent {
     data object NavigateBack : PortfolioEvent
     data class TradeAsset(val symbol: String) : PortfolioEvent
+    data object Retry : PortfolioEvent
 }
 
 sealed interface PortfolioEffect {

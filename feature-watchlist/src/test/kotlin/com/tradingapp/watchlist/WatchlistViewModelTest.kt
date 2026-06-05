@@ -81,7 +81,7 @@ class WatchlistViewModelTest {
 
         val state = viewModel.state.value
         assertFalse(state.isLoading)
-        assertEquals("Network error", state.error)
+        assertEquals("Network error", state.error) // RuntimeException.localizedMessage passthrough via ErrorMapper
     }
 
     @Test
