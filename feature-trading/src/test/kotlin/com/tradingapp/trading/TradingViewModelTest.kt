@@ -6,10 +6,12 @@ import com.tradingapp.domain.model.Asset
 import com.tradingapp.domain.model.Order
 import com.tradingapp.domain.model.OrderSide
 import com.tradingapp.domain.model.OrderStatus
+import com.tradingapp.domain.model.PriceTick
 import com.tradingapp.domain.model.ValidationError
 import com.tradingapp.domain.model.ValidationResult
 import com.tradingapp.domain.repository.TradeRepository
 import com.tradingapp.domain.usecase.GetAssetDetailUseCase
+import com.tradingapp.domain.usecase.ObserveNetworkStatusUseCase
 import com.tradingapp.domain.usecase.ObservePriceTicksUseCase
 import com.tradingapp.domain.usecase.PlaceOrderUseCase
 import com.tradingapp.domain.usecase.ValidateOrderUseCase
@@ -26,6 +28,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -41,12 +44,16 @@ class TradingViewModelTest {
     private val validateOrder: ValidateOrderUseCase = mockk()
     private val placeOrder: PlaceOrderUseCase = mockk()
     private val tradeRepository: TradeRepository = mockk()
+    private val observeNetworkStatus: ObserveNetworkStatusUseCase = mockk()
 
-    private fun buildViewModel(): TradingViewModel {
-        every { getAssetDetail(any()) } returns flowOf(Result.Loading)
+    private fun buildViewModel(assetPrice: Double = 0.0, cashBalance: Double = 10_000.0): TradingViewModel {
+        every { getAssetDetail(any()) } returns flowOf(
+            if (assetPrice > 0) Result.Success(fakeAsset(price = assetPrice)) else Result.Loading,
+        )
         every { observePriceTicks(any()) } returns emptyFlow()
-        every { tradeRepository.observeCashBalance() } returns flowOf(10_000.0)
+        every { tradeRepository.observeCashBalance() } returns flowOf(cashBalance)
         every { tradeRepository.observePosition(any()) } returns flowOf(null)
+        every { observeNetworkStatus() } returns flowOf(true)
         return TradingViewModel(
             symbol = "BTC",
             getAssetDetail = getAssetDetail,
@@ -54,6 +61,7 @@ class TradingViewModelTest {
             validateOrder = validateOrder,
             placeOrder = placeOrder,
             tradeRepository = tradeRepository,
+            observeNetworkStatus = observeNetworkStatus,
         )
     }
 
@@ -112,8 +120,17 @@ class TradingViewModelTest {
 
         every { validateOrder(any(), any(), any(), any(), any()) } returns
             ValidationResult.Invalid(ValidationError.INSUFFICIENT_BALANCE)
+        every { observeNetworkStatus() } returns flowOf(true)
 
-        val vm = TradingViewModel("BTC", getAssetDetail, observePriceTicks, validateOrder, placeOrder, tradeRepository)
+        val vm = TradingViewModel(
+            symbol = "BTC",
+            getAssetDetail = getAssetDetail,
+            observePriceTicks = observePriceTicks,
+            validateOrder = validateOrder,
+            placeOrder = placeOrder,
+            tradeRepository = tradeRepository,
+            observeNetworkStatus = observeNetworkStatus,
+        )
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.onEvent(TradingEvent.QuantityChanged("1.0"))
@@ -152,11 +169,20 @@ class TradingViewModelTest {
         every { tradeRepository.observeCashBalance() } returns flowOf(10_000.0)
         every { tradeRepository.observePosition(any()) } returns flowOf(null)
         every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
+        every { observeNetworkStatus() } returns flowOf(true)
 
         val fakeOrder = Order("1", "BTC", OrderSide.BUY, 0.1, 60_000.0, 6_000.0, OrderStatus.FILLED, 0L)
         coEvery { placeOrder(any(), any(), any(), any()) } returns kotlin.Result.success(fakeOrder)
 
-        val vm = TradingViewModel("BTC", getAssetDetail, observePriceTicks, validateOrder, placeOrder, tradeRepository)
+        val vm = TradingViewModel(
+            symbol = "BTC",
+            getAssetDetail = getAssetDetail,
+            observePriceTicks = observePriceTicks,
+            validateOrder = validateOrder,
+            placeOrder = placeOrder,
+            tradeRepository = tradeRepository,
+            observeNetworkStatus = observeNetworkStatus,
+        )
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.onEvent(TradingEvent.QuantityChanged("0.1"))
@@ -187,6 +213,164 @@ class TradingViewModelTest {
             assertEquals(TradingEffect.NavigateBack, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun `Retry event reloads asset detail`() = runTest {
+        every { getAssetDetail(any()) } returns flowOf(Result.Success(fakeAsset(price = 60_000.0)))
+        every { observePriceTicks(any()) } returns emptyFlow()
+        every { tradeRepository.observeCashBalance() } returns flowOf(10_000.0)
+        every { tradeRepository.observePosition(any()) } returns flowOf(null)
+        every { observeNetworkStatus() } returns flowOf(true)
+
+        val vm = TradingViewModel(
+            symbol = "BTC",
+            getAssetDetail = getAssetDetail,
+            observePriceTicks = observePriceTicks,
+            validateOrder = validateOrder,
+            placeOrder = placeOrder,
+            tradeRepository = tradeRepository,
+            observeNetworkStatus = observeNetworkStatus,
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.onEvent(TradingEvent.Retry)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(vm.state.value.isLoading)
+        assertEquals(60_000.0, vm.state.value.currentPrice, 0.001)
+    }
+
+    @Test
+    fun `price tick from WebSocket updates currentPrice in state`() = runTest {
+        val tickFlow = kotlinx.coroutines.flow.MutableSharedFlow<PriceTick>(extraBufferCapacity = 1)
+        every { getAssetDetail(any()) } returns flowOf(Result.Success(fakeAsset(price = 60_000.0)))
+        every { observePriceTicks(any()) } returns tickFlow
+        every { tradeRepository.observeCashBalance() } returns flowOf(10_000.0)
+        every { tradeRepository.observePosition(any()) } returns flowOf(null)
+        every { observeNetworkStatus() } returns flowOf(true)
+        every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
+
+        val vm = TradingViewModel(
+            symbol = "BTC",
+            getAssetDetail = getAssetDetail,
+            observePriceTicks = observePriceTicks,
+            validateOrder = validateOrder,
+            placeOrder = placeOrder,
+            tradeRepository = tradeRepository,
+            observeNetworkStatus = observeNetworkStatus,
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        tickFlow.emit(PriceTick("BTC", 65_000.0, 0L))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(65_000.0, vm.state.value.currentPrice, 0.001)
+    }
+
+    @Test
+    fun `QuickFillSelected 50 percent fills half of cash balance for BUY`() = runTest {
+        every { getAssetDetail(any()) } returns flowOf(Result.Success(fakeAsset(price = 40_000.0)))
+        every { observePriceTicks(any()) } returns emptyFlow()
+        every { tradeRepository.observeCashBalance() } returns flowOf(10_000.0)
+        every { tradeRepository.observePosition(any()) } returns flowOf(null)
+        every { observeNetworkStatus() } returns flowOf(true)
+        every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
+
+        val vm = TradingViewModel(
+            symbol = "BTC",
+            getAssetDetail = getAssetDetail,
+            observePriceTicks = observePriceTicks,
+            validateOrder = validateOrder,
+            placeOrder = placeOrder,
+            tradeRepository = tradeRepository,
+            observeNetworkStatus = observeNetworkStatus,
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.onEvent(TradingEvent.QuickFillSelected(0.5))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // 50% of 10_000 cash / 40_000 price = 0.125 BTC
+        assertEquals("0.125", vm.state.value.quantityInput)
+    }
+
+    @Test
+    fun `QuickFillSelected MAX fills all available position for SELL`() = runTest {
+        val position = com.tradingapp.domain.model.Position("BTC", 2.0, 50_000.0)
+        every { getAssetDetail(any()) } returns flowOf(Result.Success(fakeAsset(price = 60_000.0)))
+        every { observePriceTicks(any()) } returns emptyFlow()
+        every { tradeRepository.observeCashBalance() } returns flowOf(1_000.0)
+        every { tradeRepository.observePosition(any()) } returns flowOf(position)
+        every { observeNetworkStatus() } returns flowOf(true)
+        every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
+
+        val vm = TradingViewModel(
+            symbol = "BTC",
+            getAssetDetail = getAssetDetail,
+            observePriceTicks = observePriceTicks,
+            validateOrder = validateOrder,
+            placeOrder = placeOrder,
+            tradeRepository = tradeRepository,
+            observeNetworkStatus = observeNetworkStatus,
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.onEvent(TradingEvent.SideSelected(OrderSide.SELL))
+        vm.onEvent(TradingEvent.QuickFillSelected(1.0))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("2", vm.state.value.quantityInput) // all 2.0 BTC
+    }
+
+    @Test
+    fun `QuantityChanged with leading dot is kept as-is`() = runTest {
+        val vm = buildViewModel()
+        every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.onEvent(TradingEvent.QuantityChanged(".5"))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(".5", vm.state.value.quantityInput)
+    }
+
+    @Test
+    fun `QuantityChanged strips second decimal point`() = runTest {
+        val vm = buildViewModel()
+        every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.onEvent(TradingEvent.QuantityChanged("1.2.3"))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("1.23", vm.state.value.quantityInput)
+    }
+
+    @Test
+    fun `network going offline sets isOffline in TradingState`() = runTest {
+        val networkFlow = kotlinx.coroutines.flow.MutableStateFlow(true)
+        every { getAssetDetail(any()) } returns flowOf(Result.Loading)
+        every { observePriceTicks(any()) } returns emptyFlow()
+        every { tradeRepository.observeCashBalance() } returns flowOf(10_000.0)
+        every { tradeRepository.observePosition(any()) } returns flowOf(null)
+        every { observeNetworkStatus() } returns networkFlow
+
+        val vm = TradingViewModel(
+            symbol = "BTC",
+            getAssetDetail = getAssetDetail,
+            observePriceTicks = observePriceTicks,
+            validateOrder = validateOrder,
+            placeOrder = placeOrder,
+            tradeRepository = tradeRepository,
+            observeNetworkStatus = observeNetworkStatus,
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(vm.state.value.isOffline)
+
+        networkFlow.value = false
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.state.value.isOffline)
     }
 
     // --- Helpers ---

@@ -31,9 +31,9 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                 "implementation"(libs.findLibrary("compose-ui-tooling-preview").get())
                 "implementation"(libs.findLibrary("compose-material3").get())
                 // Baseline Profile: pre-compiles hot paths at install time
-                "implementation"(libs.findLibrary("profileinstaller").get())
+                "implementation"(libs.findLibrary("profile-installer").get())
                 "implementation"(libs.findLibrary("timber").get())
-                "debugImplementation"(libs.findLibrary("leakcanary").get())
+                "debugImplementation"(libs.findLibrary("leak-canary").get())
                 "debugImplementation"(libs.findLibrary("compose-ui-tooling").get())
                 "debugImplementation"(libs.findLibrary("compose-ui-test-manifest").get())
                 "androidTestImplementation"(platform(libs.findLibrary("compose-bom").get()))

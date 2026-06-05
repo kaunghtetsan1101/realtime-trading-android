@@ -84,6 +84,14 @@ core-ui        ──► core-designsystem (api — exposes tokens to all consum
 core-designsystem  (pure design tokens — Color, Typography, Spacing, Shape)
 ```
 
+## Screenshots
+
+> _Screenshots and GIF recordings will be added after the app is run on a physical device or emulator._
+
+| Watchlist | Market Detail | Trading | Portfolio | Settings |
+|-----------|--------------|---------|-----------|---------|
+| _(coming soon)_ | _(coming soon)_ | _(coming soon)_ | _(coming soon)_ | _(coming soon)_ |
+
 ## Architecture
 
 > Full reference: [docs/architecture.md](docs/architecture.md)
@@ -104,6 +112,60 @@ Data Layer (Repository impl / DAOs / Network DTOs)
 ```
 Event ──► ViewModel ──► State (StateFlow)
                    └──► Effect (Channel — one-shot)
+```
+
+### Architecture Diagram
+
+```mermaid
+graph TD
+    subgraph app["app module"]
+        APP["TradingApp · MainActivity · Hilt bootstrap"]
+    end
+
+    subgraph nav["core-navigation"]
+        NAV["AppNavGraph · Routes"]
+    end
+
+    subgraph features["Feature Modules"]
+        FW["feature-watchlist"]
+        FMD["feature-market-detail"]
+        FS["feature-search"]
+        FT["feature-trading"]
+        FST["feature-settings"]
+    end
+
+    subgraph domain["domain (pure Kotlin JVM)"]
+        UC["Use Cases"]
+        REPO_I["Repository Interfaces"]
+        MODELS["Domain Models"]
+    end
+
+    subgraph data_layer["data"]
+        REPO_IMPL["Repository Implementations"]
+        MAPPERS["DTO / Entity / Domain Mappers"]
+    end
+
+    subgraph core["Core Modules"]
+        CN["core-network · Retrofit · OkHttp · WebSocket"]
+        CDB["core-database · Room · DAOs · Entities"]
+        CC["core-common · Result · DispatcherProvider · ErrorMapper"]
+        CDS["core-datastore · DataStore Preferences"]
+        CUI["core-ui · Shared Composables · OfflineBanner"]
+        CDSGN["core-designsystem · Color · Typography · Spacing"]
+    end
+
+    APP --> NAV
+    APP --> CDS
+    NAV --> features
+    features --> UC
+    UC --> REPO_I
+    REPO_IMPL --> REPO_I
+    REPO_IMPL --> CN
+    REPO_IMPL --> CDB
+    REPO_IMPL --> CC
+    features --> CUI
+    CUI --> CDSGN
+    features --> CC
 ```
 
 ## Data Flow (Live Prices)
@@ -203,11 +265,22 @@ Every component has paired `@Preview` annotations for both light and dark to cat
 - `TradingDatabase` version 2 → 3 adds `orders`, `positions`, and `wallet` tables.
 - `WalletEntity` is a single-row table seeded with $10 000 on first access.
 
-### Test coverage (23 cases)
+### Offline state
 
-- `ValidateOrderUseCaseTest` — all BUY/SELL error paths + happy paths
-- `PlaceOrderUseCaseTest` — correct order construction, failure propagation, unique ID generation
-- `TradingViewModelTest` — state transitions, real-time validation, order effects
+`TradingScreen` and `PortfolioScreen` both subscribe to `ObserveNetworkStatusUseCase` and
+surface an `OfflineBanner` in the `topBar` when connectivity is lost. Room holds the last-known
+prices and balances, so screens remain usable offline with a clear staleness indicator.
+
+### Test coverage (44 cases across 6 test files)
+
+| Test class | Module | Cases | What is tested |
+|---|---|---|---|
+| `ValidateOrderUseCaseTest` | `feature-trading` | ~8 | All BUY/SELL validation error paths |
+| `PlaceOrderUseCaseTest` | `feature-trading` | 8 | Order construction, SELL side, status, totalValue, exception wrapping |
+| `TradingViewModelTest` | `feature-trading` | 16 | State transitions, validation, WS price tick, QuickFill, offline flag |
+| `PortfolioViewModelTest` | `feature-trading` | 8 | Loading/error/portfolio states, order history, Retry, effects, offline flag |
+| `TradeRepositoryImplTest` | `data` | 11 | Wallet debit/credit, weighted avg price, position upsert/delete, atomic flow |
+| `GetPortfolioUseCaseTest` | `domain` | 7 | P&L math, reactive price update, zero-cost basis, missing-price fallback |
 
 ## Settings & Polish (M10)
 
@@ -356,7 +429,7 @@ changes are required and it is automatically excluded from release builds.
 | Layer | Tool | Location |
 |-------|------|---------|
 | ViewModel state & effects | JUnit + MockK + Turbine | feature-watchlist, feature-market-detail, feature-search, feature-trading |
-| Use case logic | JUnit + MockK | feature-trading (`ValidateOrderUseCaseTest`, `PlaceOrderUseCaseTest`) |
+| Use case logic | JUnit + MockK | feature-trading, domain |
 | Repository logic | JUnit + MockK + Turbine | data |
 | WebSocket flow | Turbine + MockK | core-network |
 | HTTP API parsing | JUnit + MockWebServer | core-network (`MarketApiTest`) |
@@ -412,6 +485,7 @@ significantly faster than cold builds.
 | `AssetRow` extraction | `core-ui` shared component | Identical row existed in Watchlist and Search; single source of truth eliminates drift |
 | Secondary text colour | `onSurfaceVariant` token | Replaces raw `alpha(0.6f)` — guaranteed contrast in both themes without manual tuning |
 | Atomic order placement | `room.withTransaction` | Wallet debit, position upsert/delete, and order insert execute atomically — partial state is impossible |
+| `runInTransaction` testability | `open internal` method on `TradeRepositoryImpl` | Room 2.8.x `withTransaction` is an Android-specific extension; unit tests override this single method to call the block directly, keeping tests fast and hermetic without `mockkStatic` |
 | Seed wallet | Single-row `WalletEntity` ($10 000) | Pre-seeded on first access; avoids a separate onboarding flow for a portfolio demo |
 | `ValidateOrderUseCase` is pure | No I/O, no coroutine | Enables synchronous real-time validation on every keystroke without suspending the ViewModel |
 | `TradingViewModel` assisted inject | `@AssistedInject` + `symbol` param | Passes the asset symbol at runtime without a global state holder or saved-state workaround |
@@ -421,3 +495,48 @@ significantly faster than cold builds.
 | `ErrorMapper` in `core-common` | Maps `IOException` hierarchy | Pure JVM — no Retrofit dependency in core-common; HttpException handling stays in data layer |
 | `AppInfo` provided by `app` module | `@Provides @Singleton` in `AppInfoModule` | Only the `app` module knows `BuildConfig.VERSION_NAME`; injected into `SettingsViewModel` via Hilt |
 | PortfolioViewModel retry | `Job` per flow + `.catch {}` | Room flows don't normally throw, but `.catch` is the safety net; Job tracking prevents duplicate observers on retry |
+
+## Known Limitations
+
+| Limitation | Detail |
+|---|---|
+| Simulated data only | All prices come from the Binance public WebSocket feed. No real orders are placed; the portfolio is entirely local state seeded with $10,000 virtual cash. |
+| WebSocket stream cap | Binance combined-stream endpoint caps at 1,024 streams. The app tracks the top 100 USDT assets and subscribes to the top 50 by volume; assets ranked 51–100 show last-synced price without a live tick. |
+| No authentication | There is no user login or account system. This is intentional for a portfolio demo. |
+| No real-money trading | Order placement writes to Room only. No broker API integration exists. |
+| Theme flash on first launch | The app renders with the system default theme for ~1 frame before DataStore resolves the stored preference. Acceptable for a portfolio demo; solvable with a SplashScreen API pre-commit. |
+| No price alerts | Push notifications for price thresholds are not implemented. |
+| No charting | Price history is limited to the last 50 ticks shown as a simple line in the Detail screen. Full candlestick charting is a Phase 2 enhancement. |
+| Verbose logging default | Fresh installs start with verbose logging enabled. Users can disable it in Settings → Developer Options. |
+
+## Future Improvements
+
+- Replace simulated orders with a paper-trading sandbox API
+- Candlestick chart with multiple time-frame support
+- Push notifications for price thresholds
+- Portfolio performance over time (historical P&L chart)
+- Biometric lock for the trading screen
+- Widget for home-screen price tiles
+- Full Compose UI test suite (instrumented)
+
+## License
+
+```
+MIT License
+
+Copyright (c) 2026 Kaung Htet San
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+```

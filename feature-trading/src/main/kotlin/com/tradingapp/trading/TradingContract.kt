@@ -17,6 +17,7 @@ data class TradingState(
     val isPlacingOrder: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null,
+    val isOffline: Boolean = false,
 )
 
 sealed interface TradingEvent {

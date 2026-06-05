@@ -9,6 +9,7 @@ import com.tradingapp.domain.model.ValidationError
 import com.tradingapp.domain.model.ValidationResult
 import com.tradingapp.domain.repository.TradeRepository
 import com.tradingapp.domain.usecase.GetAssetDetailUseCase
+import com.tradingapp.domain.usecase.ObserveNetworkStatusUseCase
 import com.tradingapp.domain.usecase.ObservePriceTicksUseCase
 import com.tradingapp.domain.usecase.PlaceOrderUseCase
 import com.tradingapp.domain.usecase.ValidateOrderUseCase
@@ -35,6 +36,7 @@ class TradingViewModel @AssistedInject constructor(
     private val validateOrder: ValidateOrderUseCase,
     private val placeOrder: PlaceOrderUseCase,
     private val tradeRepository: TradeRepository,
+    private val observeNetworkStatus: ObserveNetworkStatusUseCase,
 ) : ViewModel() {
 
     @AssistedFactory
@@ -55,6 +57,9 @@ class TradingViewModel @AssistedInject constructor(
         observeLivePrice()
         observeCashBalance()
         observePosition()
+        observeNetworkStatus()
+            .onEach { isOnline -> stateMutable.update { it.copy(isOffline = !isOnline) } }
+            .launchIn(viewModelScope)
     }
 
     fun onEvent(event: TradingEvent) {
