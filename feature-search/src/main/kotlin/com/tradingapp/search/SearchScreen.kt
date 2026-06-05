@@ -239,19 +239,18 @@ private val SortOrder.label: String
 
 // --- Previews ---
 
-private fun fakeAsset(symbol: String, name: String, price: Double, pct: Double, fav: Boolean = false) =
-    Asset(
-        symbol = symbol,
-        name = name,
-        currentPrice = price,
-        priceChange24h = price * pct / 100,
-        priceChangePct24h = pct,
-        marketCap = 1_000_000_000.0,
-        volume24h = 50_000_000.0,
-        logoUrl = null,
-        isFavorite = fav,
-        lastUpdated = System.currentTimeMillis(),
-    )
+private fun fakeAsset(symbol: String, name: String, price: Double, pct: Double, fav: Boolean = false) = Asset(
+    symbol = symbol,
+    name = name,
+    currentPrice = price,
+    priceChange24h = price * pct / 100,
+    priceChangePct24h = pct,
+    marketCap = 1_000_000_000.0,
+    volume24h = 50_000_000.0,
+    logoUrl = null,
+    isFavorite = fav,
+    lastUpdated = System.currentTimeMillis(),
+)
 
 @Preview(name = "Light", showBackground = true)
 @Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)

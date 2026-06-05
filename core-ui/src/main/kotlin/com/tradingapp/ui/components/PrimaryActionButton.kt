@@ -19,12 +19,7 @@ import com.tradingapp.ui.theme.TradingAppTheme
  * target height of 48 dp (WCAG 2.5.8 — Target Size minimum).
  */
 @Composable
-fun PrimaryActionButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
+fun PrimaryActionButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
     Button(
         onClick = onClick,
         enabled = enabled,

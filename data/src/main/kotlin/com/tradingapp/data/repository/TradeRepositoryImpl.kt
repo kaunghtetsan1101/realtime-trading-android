@@ -97,8 +97,7 @@ class TradeRepositoryImpl @Inject constructor(
     override fun observeCashBalance(): Flow<Double> =
         walletDao.observe().map { it?.cashBalance ?: WalletEntity.INITIAL_BALANCE }
 
-    override suspend fun getCashBalance(): Double =
-        withContext(dispatchers.io) {
-            walletDao.get()?.cashBalance ?: WalletEntity.INITIAL_BALANCE
-        }
+    override suspend fun getCashBalance(): Double = withContext(dispatchers.io) {
+        walletDao.get()?.cashBalance ?: WalletEntity.INITIAL_BALANCE
+    }
 }

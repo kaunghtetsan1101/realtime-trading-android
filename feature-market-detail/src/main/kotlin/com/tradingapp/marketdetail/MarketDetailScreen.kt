@@ -210,21 +210,20 @@ private fun formatLargeNumber(value: Double): String = when {
 
 // --- Previews ---
 
-private fun fakeAsset() =
-    Asset(
-        symbol = "BTC",
-        name = "Bitcoin",
-        currentPrice = 67_500.0,
-        priceChange24h = 1_575.0,
-        priceChangePct24h = 2.34,
-        high24h = 68_200.0,
-        low24h = 66_100.0,
-        marketCap = 1_320_000_000_000.0,
-        volume24h = 28_500_000_000.0,
-        logoUrl = null,
-        isFavorite = false,
-        lastUpdated = System.currentTimeMillis(),
-    )
+private fun fakeAsset() = Asset(
+    symbol = "BTC",
+    name = "Bitcoin",
+    currentPrice = 67_500.0,
+    priceChange24h = 1_575.0,
+    priceChangePct24h = 2.34,
+    high24h = 68_200.0,
+    low24h = 66_100.0,
+    marketCap = 1_320_000_000_000.0,
+    volume24h = 28_500_000_000.0,
+    logoUrl = null,
+    isFavorite = false,
+    lastUpdated = System.currentTimeMillis(),
+)
 
 @Preview(name = "Light", showBackground = true)
 @Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)

@@ -7,9 +7,7 @@ import com.tradingapp.domain.repository.TradeRepository
 import java.util.UUID
 import javax.inject.Inject
 
-class PlaceOrderUseCase @Inject constructor(
-    private val tradeRepository: TradeRepository,
-) {
+class PlaceOrderUseCase @Inject constructor(private val tradeRepository: TradeRepository) {
     suspend operator fun invoke(
         side: OrderSide,
         symbol: String,

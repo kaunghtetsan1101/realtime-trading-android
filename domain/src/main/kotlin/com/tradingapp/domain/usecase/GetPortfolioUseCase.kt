@@ -23,7 +23,9 @@ class GetPortfolioUseCase @Inject constructor(
             val unrealizedPnL = (livePrice - position.averagePrice) * position.quantity
             val unrealizedPnLPct = if (position.averagePrice > 0.0) {
                 (livePrice - position.averagePrice) / position.averagePrice * 100.0
-            } else 0.0
+            } else {
+                0.0
+            }
             position.copy(
                 currentPrice = livePrice,
                 totalValue = totalValue,
