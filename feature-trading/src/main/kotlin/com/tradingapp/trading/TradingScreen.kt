@@ -99,7 +99,7 @@ private fun TradingContent(state: TradingState, snackbarHost: SnackbarHostState,
                     },
                     scrollBehavior = scrollBehavior,
                 )
-                OfflineBanner(isOffline = state.isOffline, lastUpdatedMs = null)
+                OfflineBanner(isOffline = state.isOffline, lastUpdatedMs = state.lastSyncedAt)
             }
         },
         snackbarHost = { SnackbarHost(snackbarHost) },

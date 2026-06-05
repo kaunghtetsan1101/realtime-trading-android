@@ -166,6 +166,28 @@ class AssetRepositoryImplTest {
     }
 
     // -------------------------------------------------------------------------
+    // toggleFavorite persistence
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `toggleFavorite delegates to assetDao setFavorite with correct arguments`() = runTest(testDispatcher) {
+        val repo = buildRepo()
+
+        repo.toggleFavorite("BTC", true)
+
+        coVerify { assetDao.setFavorite("BTC", true) }
+    }
+
+    @Test
+    fun `toggleFavorite unfavorite delegates to assetDao setFavorite with false`() = runTest(testDispatcher) {
+        val repo = buildRepo()
+
+        repo.toggleFavorite("ETH", false)
+
+        coVerify { assetDao.setFavorite("ETH", false) }
+    }
+
+    // -------------------------------------------------------------------------
     // observeAssets delegates to Room
     // -------------------------------------------------------------------------
 

@@ -65,7 +65,9 @@ class PortfolioViewModel @Inject constructor(
                 stateMutable.update { it.copy(error = ErrorMapper.toUserMessage(e), isLoading = false) }
             }
             .onEach { portfolio ->
-                stateMutable.update { it.copy(portfolio = portfolio, isLoading = false, error = null) }
+                stateMutable.update {
+                    it.copy(portfolio = portfolio, isLoading = false, error = null, lastSyncedAt = System.currentTimeMillis())
+                }
             }
             .launchIn(viewModelScope)
     }

@@ -203,6 +203,45 @@ class TradingViewModelTest {
     }
 
     @Test
+    fun `ConfirmOrder failure sends ShowSnackbar with error message and hides sheet`() = runTest {
+        every { getAssetDetail(any()) } returns flowOf(Result.Success(fakeAsset(price = 60_000.0)))
+        every { observePriceTicks(any()) } returns emptyFlow()
+        every { tradeRepository.observeCashBalance() } returns flowOf(10_000.0)
+        every { tradeRepository.observePosition(any()) } returns flowOf(null)
+        every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
+        every { observeNetworkStatus() } returns flowOf(true)
+        coEvery { placeOrder(any(), any(), any(), any()) } returns
+            kotlin.Result.failure(RuntimeException("Insufficient funds"))
+
+        val vm = TradingViewModel(
+            symbol = "BTC",
+            getAssetDetail = getAssetDetail,
+            observePriceTicks = observePriceTicks,
+            validateOrder = validateOrder,
+            placeOrder = placeOrder,
+            tradeRepository = tradeRepository,
+            observeNetworkStatus = observeNetworkStatus,
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.onEvent(TradingEvent.QuantityChanged("0.1"))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.effects.test {
+            vm.onEvent(TradingEvent.ConfirmOrder)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val effect = awaitItem()
+            assertTrue(effect is TradingEffect.ShowSnackbar)
+            assertTrue((effect as TradingEffect.ShowSnackbar).message.contains("Order failed"))
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertFalse(vm.state.value.isReviewVisible)
+        assertFalse(vm.state.value.isPlacingOrder)
+    }
+
+    @Test
     fun `NavigateBack event emits NavigateBack effect`() = runTest {
         val vm = buildViewModel()
         testDispatcher.scheduler.advanceUntilIdle()

@@ -18,6 +18,7 @@ data class TradingState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val isOffline: Boolean = false,
+    val lastSyncedAt: Long? = null,
 )
 
 sealed interface TradingEvent {

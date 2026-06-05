@@ -1,5 +1,6 @@
 # Realtime Trading Android Portfolio App
 
+[![CI](https://github.com/kaunghtetsan1101/realtime-trading-android/actions/workflows/ci.yml/badge.svg)](https://github.com/kaunghtetsan1101/realtime-trading-android/actions/workflows/ci.yml)
 
 A production-style Native Android app for realtime market watching and trading simulation.
 Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
@@ -86,11 +87,11 @@ core-designsystem  (pure design tokens — Color, Typography, Spacing, Shape)
 
 ## Screenshots
 
-> _Screenshots and GIF recordings will be added after the app is run on a physical device or emulator._
+> Screenshots are stored in [`docs/screenshots/`](docs/screenshots/). To add them: run the app on a device or emulator, capture each screen, save as `watchlist.png`, `detail.png`, `trading.png`, `portfolio.png`, `settings.png`, and update the table below.
 
 | Watchlist | Market Detail | Trading | Portfolio | Settings |
 |-----------|--------------|---------|-----------|---------|
-| _(coming soon)_ | _(coming soon)_ | _(coming soon)_ | _(coming soon)_ | _(coming soon)_ |
+| _(add screenshot)_ | _(add screenshot)_ | _(add screenshot)_ | _(add screenshot)_ | _(add screenshot)_ |
 
 ## Architecture
 
@@ -265,6 +266,32 @@ Every component has paired `@Preview` annotations for both light and dark to cat
 - `TradingDatabase` version 2 → 3 adds `orders`, `positions`, and `wallet` tables.
 - `WalletEntity` is a single-row table seeded with $10 000 on first access.
 
+### TradingScreen state machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> Loading : app opens / Retry
+
+    Loading --> Idle : asset loaded (price > 0)
+    Loading --> Error : network / DB failure
+
+    Error --> Loading : Retry event
+
+    Idle --> Validating : QuantityChanged (non-empty)
+    Validating --> Idle : quantity cleared / SideSelected
+
+    Validating --> Reviewing : ReviewOrder event\n(ValidationResult.Valid)
+    Validating --> Validating : keystroke → inline error\n(ValidationResult.Invalid)
+
+    Reviewing --> Idle : DismissReview / Cancel tapped
+    Reviewing --> Placing : ConfirmOrder event
+
+    Placing --> Idle : success → ShowSnackbar("Order placed")
+    Placing --> Idle : failure → ShowSnackbar("Order failed")
+```
+
+State fields: `isLoading`, `currentPrice`, `error`, `validationError`, `isReviewVisible`, `isPlacingOrder`
+
 ### Offline state
 
 `TradingScreen` and `PortfolioScreen` both subscribe to `ObserveNetworkStatusUseCase` and
@@ -352,10 +379,14 @@ Two macrobenchmarks compare `CompilationMode.None()` (JIT only) vs `CompilationM
 ./gradlew :macrobenchmark:connectedBenchmarkAndroidTest
 ```
 
-| Benchmark | Metric |
-|-----------|--------|
-| `StartupBenchmark` | Cold start time (ms) |
-| `WatchlistScrollBenchmark` | Frame duration P50/P90/P99 (ms) |
+| Benchmark | CompilationMode.None (JIT) | CompilationMode.Partial (Profile) | Improvement |
+|-----------|---------------------------|-----------------------------------|-------------|
+| Cold startup (ms) | — | — | — |
+| Scroll P50 frame (ms) | — | — | — |
+| Scroll P90 frame (ms) | — | — | — |
+| Scroll P99 frame (ms) | — | — | — |
+
+> Run `./gradlew :macrobenchmark:connectedBenchmarkAndroidTest` on a physical device (API 29+, no emulator) and replace `—` with the measured values. Emulators produce unreliable frame timing due to software rendering.
 
 ## Setup
 
@@ -391,6 +422,46 @@ After cloning, run once to format all existing files so CI passes:
 ./gradlew :core-network:test               # Network + MockWebServer tests
 ./gradlew connectedAndroidTest             # Instrumented tests (requires emulator)
 ```
+
+## Troubleshooting
+
+### Binance WebSocket or REST is unreachable
+
+Binance blocks API access from some regions and CI environments. If the watchlist shows a loading
+spinner indefinitely or the WebSocket never connects:
+
+- Use a VPN or a device with unrestricted internet access.
+- CI pipelines (GitHub Actions hosted runners) are typically blocked — this is expected. The four
+  CI jobs (build, test, detekt, spotless) are all JVM-only and do not require network access.
+- The instrumented smoke test (`WatchlistNavigationTest`) is excluded from CI for this reason.
+  Run it locally with `./gradlew :app:connectedDebugAndroidTest`.
+
+### JDK version mismatch
+
+The project requires **JDK 21**. If Gradle sync fails with a toolchain error:
+
+```
+No matching toolchain could be found for requested specification: ...
+```
+
+Install JDK 21 via Android Studio (**Settings → Build → Build Tools → Gradle → Gradle JDK**) and
+re-sync. Alternatively set `JAVA_HOME` to a JDK 21 installation before running Gradle from the
+terminal.
+
+### Gradle sync fails after clone
+
+Run the formatting fix once before opening in Android Studio:
+
+```bash
+./gradlew spotlessApply
+```
+
+If sync still fails, try invalidating caches: **File → Invalidate Caches → Invalidate and Restart**.
+
+### `connectedAndroidTest` finds no tests
+
+Ensure an emulator or device is connected (`adb devices`) before running. The instrumented test
+requires API 26+ (minSdk).
 
 ## Code Quality
 
@@ -456,9 +527,6 @@ Workflow: `.github/workflows/ci.yml`.
 Gradle build cache is managed by `gradle/actions/setup-gradle@v4` — incremental runs are
 significantly faster than cold builds.
 
-> **Badge:** Replace `<your-username>` in the badge URL at the top of this file with your
-> GitHub username after pushing.
-
 ## Key Design Decisions
 
 | Decision | Choice | Rationale |
@@ -508,6 +576,11 @@ significantly faster than cold builds.
 | No price alerts | Push notifications for price thresholds are not implemented. |
 | No charting | Price history is limited to the last 50 ticks shown as a simple line in the Detail screen. Full candlestick charting is a Phase 2 enhancement. |
 | Verbose logging default | Fresh installs start with verbose logging enabled. Users can disable it in Settings → Developer Options. |
+| Destructive Room migration | `TradingDatabase` uses `fallbackToDestructiveMigration()`. Any schema change wipes local data on the next app launch. Acceptable for a portfolio demo; a production app would supply explicit migration objects. |
+
+## Interview Notes
+
+Key design decisions, architecture tradeoffs, and common interview questions with answers are documented in [`references/interview_talking_points.md`](references/interview_talking_points.md).
 
 ## Future Improvements
 
@@ -524,7 +597,7 @@ significantly faster than cold builds.
 ```
 MIT License
 
-Copyright (c) 2026 Kaung Htet San
+Copyright (c) 2025 Kaung Htet San
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

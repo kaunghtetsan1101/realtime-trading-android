@@ -1,5 +1,6 @@
 package com.tradingapp.data.repository
 
+import androidx.annotation.VisibleForTesting
 import androidx.room.withTransaction
 import com.tradingapp.common.dispatcher.DispatcherProvider
 import com.tradingapp.data.mapper.toDomain
@@ -20,6 +21,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// Open to allow test subclasses to override runInTransaction, bypassing Room's Android-only withTransaction.
 @Singleton
 open class TradeRepositoryImpl @Inject constructor(
     private val db: TradingDatabase,
@@ -29,7 +31,7 @@ open class TradeRepositoryImpl @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : TradeRepository {
 
-    // Extracted to allow test subclasses to bypass Room's Android-specific transaction machinery.
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     internal open suspend fun <R> runInTransaction(block: suspend () -> R): R = db.withTransaction(block)
 
     override suspend fun placeOrder(order: Order): Result<Order> = runCatching {
