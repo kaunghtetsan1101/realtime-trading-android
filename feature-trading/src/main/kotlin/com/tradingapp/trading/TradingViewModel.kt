@@ -105,7 +105,9 @@ class TradingViewModel @AssistedInject constructor(
 
     private fun observeLivePrice() {
         observePriceTicks(symbol)
-            .onEach { tick -> updateAndValidate { it.copy(currentPrice = tick.price) } }
+            .onEach { tick ->
+                updateAndValidate { it.copy(currentPrice = tick.price, lastSyncedAt = System.currentTimeMillis()) }
+            }
             .launchIn(viewModelScope)
     }
 

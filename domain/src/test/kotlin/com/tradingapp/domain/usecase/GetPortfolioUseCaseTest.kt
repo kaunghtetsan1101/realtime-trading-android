@@ -9,6 +9,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -186,6 +187,36 @@ class GetPortfolioUseCaseTest {
             assertEquals(10_000.0, second.positions.first().unrealizedPnL, 0.001)
 
             cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Error propagation — combine has no internal catch
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `exception from positions flow propagates to collector`() = runTest {
+        every { tradeRepository.observePositions() } returns flow { throw RuntimeException("DB error") }
+        every { assetRepository.observeAssets() } returns flowOf(emptyList())
+        every { tradeRepository.observeCashBalance() } returns flowOf(0.0)
+
+        useCase().test {
+            val error = awaitError()
+            assertTrue(error is RuntimeException)
+            assertEquals("DB error", error.message)
+        }
+    }
+
+    @Test
+    fun `exception from cashBalance flow propagates to collector`() = runTest {
+        every { tradeRepository.observePositions() } returns flowOf(emptyList())
+        every { assetRepository.observeAssets() } returns flowOf(emptyList())
+        every { tradeRepository.observeCashBalance() } returns flow { throw IllegalStateException("Wallet missing") }
+
+        useCase().test {
+            val error = awaitError()
+            assertTrue(error is IllegalStateException)
+            assertEquals("Wallet missing", error.message)
         }
     }
 

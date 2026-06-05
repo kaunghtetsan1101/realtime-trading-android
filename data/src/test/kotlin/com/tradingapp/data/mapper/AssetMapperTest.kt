@@ -93,6 +93,36 @@ class AssetMapperTest {
     }
 
     @Test
+    fun `toEntity maps BNB to BNB`() {
+        val entity = dto(symbol = "BNBUSDT").toEntity()
+        assertEquals("BNB", entity.name)
+    }
+
+    @Test
+    fun `toEntity maps XRP to XRP`() {
+        val entity = dto(symbol = "XRPUSDT").toEntity()
+        assertEquals("XRP", entity.name)
+    }
+
+    @Test
+    fun `toEntity maps DOGE to Dogecoin`() {
+        val entity = dto(symbol = "DOGEUSDT").toEntity()
+        assertEquals("Dogecoin", entity.name)
+    }
+
+    @Test
+    fun `toEntity maps MATIC to Polygon`() {
+        val entity = dto(symbol = "MATICUSDT").toEntity()
+        assertEquals("Polygon", entity.name)
+    }
+
+    @Test
+    fun `toEntity maps DOT to Polkadot`() {
+        val entity = dto(symbol = "DOTUSDT").toEntity()
+        assertEquals("Polkadot", entity.name)
+    }
+
+    @Test
     fun `toEntity gracefully handles non-numeric string with zero fallback`() {
         val entity = dto(lastPrice = "N/A", priceChange = "", quoteVolume = "—").toEntity()
         assertEquals(0.0, entity.price, 0.0)

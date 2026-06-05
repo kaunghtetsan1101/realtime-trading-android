@@ -9,6 +9,7 @@ data class PortfolioState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val isOffline: Boolean = false,
+    val lastSyncedAt: Long? = null,
 )
 
 sealed interface PortfolioEvent {

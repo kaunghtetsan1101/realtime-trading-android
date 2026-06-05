@@ -122,6 +122,47 @@ class WatchlistViewModelTest {
     }
 
     @Test
+    fun `Refresh event on sync success emits no effect and keeps assets visible`() = runTest {
+        val assets = listOf(fakeAsset("BTC"), fakeAsset("ETH"))
+        every { getWatchlist() } returns flowOf(Result.Success(assets))
+        coEvery { syncAssets() } returns kotlin.Result.success(Unit)
+
+        viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Trigger explicit user refresh
+        viewModel.onEvent(WatchlistEvent.Refresh)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Assets must still be visible and no error snackbar should have been emitted
+        assertEquals(assets, viewModel.state.value.assets)
+        assertNull(viewModel.state.value.error)
+    }
+
+    @Test
+    fun `Refresh event on sync failure emits ShowSnackbar without clearing assets`() = runTest {
+        val assets = listOf(fakeAsset("BTC"))
+        every { getWatchlist() } returns flowOf(Result.Success(assets))
+        coEvery { syncAssets() } returnsMany listOf(
+            kotlin.Result.success(Unit),        // initial sync in init
+            kotlin.Result.failure(RuntimeException("Connection refused")), // explicit refresh
+        )
+
+        viewModel = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.effects.test {
+            viewModel.onEvent(WatchlistEvent.Refresh)
+            testDispatcher.scheduler.advanceUntilIdle()
+            val effect = awaitItem()
+            assertTrue(effect is WatchlistEffect.ShowSnackbar)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertEquals(assets, viewModel.state.value.assets)
+    }
+
+    @Test
     fun `network offline sets isOffline true`() = runTest {
         val networkFlow = MutableStateFlow(true)
         every { observeNetworkStatus() } returns networkFlow

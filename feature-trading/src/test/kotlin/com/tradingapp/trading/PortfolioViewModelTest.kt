@@ -12,6 +12,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.tradingapp.domain.model.Position
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
@@ -184,6 +185,43 @@ class PortfolioViewModelTest {
         networkFlow.value = false
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.state.value.isOffline)
+    }
+
+    // -------------------------------------------------------------------------
+    // Reactive price-tick update
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `portfolio state updates reactively when price tick changes portfolio value`() = runTest {
+        val initialPortfolio = Portfolio(
+            cashBalance = 5_000.0,
+            positions = listOf(Position("BTC", quantity = 0.1, averagePrice = 50_000.0, currentPrice = 50_000.0, totalValue = 5_000.0, unrealizedPnL = 0.0, unrealizedPnLPct = 0.0)),
+            totalValue = 10_000.0,
+            totalUnrealizedPnL = 0.0,
+            totalUnrealizedPnLPct = 0.0,
+        )
+        val updatedPortfolio = Portfolio(
+            cashBalance = 5_000.0,
+            positions = listOf(Position("BTC", quantity = 0.1, averagePrice = 50_000.0, currentPrice = 60_000.0, totalValue = 6_000.0, unrealizedPnL = 1_000.0, unrealizedPnLPct = 20.0)),
+            totalValue = 11_000.0,
+            totalUnrealizedPnL = 1_000.0,
+            totalUnrealizedPnLPct = 20.0,
+        )
+        val portfolioFlow = MutableStateFlow(initialPortfolio)
+        every { getPortfolio() } returns portfolioFlow
+        every { getOrderHistory() } returns flowOf(emptyList())
+
+        val vm = buildViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(10_000.0, vm.state.value.portfolio!!.totalValue, 0.001)
+
+        portfolioFlow.value = updatedPortfolio
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val updated = vm.state.value.portfolio!!
+        assertEquals(11_000.0, updated.totalValue, 0.001)
+        assertEquals(1_000.0, updated.totalUnrealizedPnL, 0.001)
+        assertEquals(60_000.0, updated.positions.first().currentPrice, 0.001)
     }
 
     // -------------------------------------------------------------------------

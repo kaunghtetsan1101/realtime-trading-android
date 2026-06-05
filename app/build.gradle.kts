@@ -10,6 +10,7 @@ android {
         applicationId = "com.tradingapp"
         versionCode = 1
         versionName = "1.0.0"
+        testInstrumentationRunner = "dagger.hilt.android.testing.HiltTestRunner"
     }
 
     buildTypes {
@@ -22,6 +23,9 @@ android {
 }
 
 dependencies {
+    androidTestImplementation(libs.findLibrary("hilt-android-testing").get())
+    kspAndroidTest(libs.findLibrary("hilt-compiler").get())
+
     // Navigation graph — pulls in all feature modules transitively
     implementation(project(":core-navigation"))
 
