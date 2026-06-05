@@ -8,6 +8,7 @@ data class PortfolioState(
     val orders: List<Order> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null,
+    val isOffline: Boolean = false,
 )
 
 sealed interface PortfolioEvent {

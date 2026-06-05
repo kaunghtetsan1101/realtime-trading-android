@@ -55,6 +55,7 @@ import com.tradingapp.domain.model.Position
 import com.tradingapp.domain.model.ValidationError
 import com.tradingapp.ui.components.ErrorState
 import com.tradingapp.ui.components.LoadingIndicator
+import com.tradingapp.ui.components.OfflineBanner
 import com.tradingapp.ui.components.PrimaryActionButton
 import com.tradingapp.ui.theme.TradingAppTheme
 
@@ -88,15 +89,18 @@ private fun TradingContent(state: TradingState, snackbarHost: SnackbarHostState,
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text(title, fontWeight = FontWeight.SemiBold) },
-                navigationIcon = {
-                    IconButton(onClick = { onEvent(TradingEvent.NavigateBack) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
+            Column {
+                TopAppBar(
+                    title = { Text(title, fontWeight = FontWeight.SemiBold) },
+                    navigationIcon = {
+                        IconButton(onClick = { onEvent(TradingEvent.NavigateBack) }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+                OfflineBanner(isOffline = state.isOffline, lastUpdatedMs = null)
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHost) },
     ) { padding ->

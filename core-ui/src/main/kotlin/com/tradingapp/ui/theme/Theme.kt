@@ -6,13 +6,13 @@ import androidx.compose.runtime.Composable
 import com.tradingapp.designsystem.DarkColorScheme
 import com.tradingapp.designsystem.LightColorScheme
 import com.tradingapp.designsystem.TradingShapes
-import com.tradingapp.designsystem.tradingTypography
+import com.tradingapp.designsystem.TradingTypography
 
 @Composable
 fun TradingAppTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
-        typography = tradingTypography,
+        typography = TradingTypography,
         shapes = TradingShapes,
         content = content,
     )

@@ -21,7 +21,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class TradeRepositoryImpl @Inject constructor(
+open class TradeRepositoryImpl @Inject constructor(
     private val db: TradingDatabase,
     private val orderDao: OrderDao,
     private val positionDao: PositionDao,
@@ -29,9 +29,12 @@ class TradeRepositoryImpl @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : TradeRepository {
 
+    // Extracted to allow test subclasses to bypass Room's Android-specific transaction machinery.
+    internal open suspend fun <R> runInTransaction(block: suspend () -> R): R = db.withTransaction(block)
+
     override suspend fun placeOrder(order: Order): Result<Order> = runCatching {
         withContext(dispatchers.io) {
-            db.withTransaction {
+            runInTransaction {
                 val wallet = walletDao.get() ?: WalletEntity(cashBalance = WalletEntity.INITIAL_BALANCE)
 
                 val newBalance = when (order.side) {

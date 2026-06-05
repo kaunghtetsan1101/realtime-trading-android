@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.tradingapp.common.error.ErrorMapper
 import com.tradingapp.domain.usecase.GetOrderHistoryUseCase
 import com.tradingapp.domain.usecase.GetPortfolioUseCase
+import com.tradingapp.domain.usecase.ObserveNetworkStatusUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -23,6 +24,7 @@ import javax.inject.Inject
 class PortfolioViewModel @Inject constructor(
     private val getPortfolio: GetPortfolioUseCase,
     private val getOrderHistory: GetOrderHistoryUseCase,
+    private val observeNetworkStatus: ObserveNetworkStatusUseCase,
 ) : ViewModel() {
 
     private val stateMutable = MutableStateFlow(PortfolioState())
@@ -37,6 +39,9 @@ class PortfolioViewModel @Inject constructor(
     init {
         observePortfolio()
         observeOrders()
+        observeNetworkStatus()
+            .onEach { isOnline -> stateMutable.update { it.copy(isOffline = !isOnline) } }
+            .launchIn(viewModelScope)
     }
 
     fun onEvent(event: PortfolioEvent) {

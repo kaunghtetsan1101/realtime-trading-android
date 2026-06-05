@@ -47,6 +47,7 @@ import com.tradingapp.domain.model.Position
 import com.tradingapp.ui.components.EmptyState
 import com.tradingapp.ui.components.ErrorState
 import com.tradingapp.ui.components.LoadingIndicator
+import com.tradingapp.ui.components.OfflineBanner
 import com.tradingapp.ui.components.PercentageBadge
 import com.tradingapp.ui.components.SectionHeader
 import com.tradingapp.ui.theme.TradingAppTheme
@@ -82,15 +83,18 @@ private fun PortfolioContent(state: PortfolioState, onEvent: (PortfolioEvent) ->
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text("Portfolio", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = {
-                    IconButton(onClick = { onEvent(PortfolioEvent.NavigateBack) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
+            Column {
+                TopAppBar(
+                    title = { Text("Portfolio", fontWeight = FontWeight.SemiBold) },
+                    navigationIcon = {
+                        IconButton(onClick = { onEvent(PortfolioEvent.NavigateBack) }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+                OfflineBanner(isOffline = state.isOffline, lastUpdatedMs = null)
+            }
         },
     ) { padding ->
         when {

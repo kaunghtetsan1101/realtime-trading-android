@@ -68,7 +68,6 @@ mockk               = "1.14.11"
 # Build-logic classpath (used in build-logic/convention/build.gradle.kts)
 android-gradle-plugin          = { group = "com.android.tools.build",   name = "gradle",                         version.ref = "agp" }
 androidx-benchmark-macro-junit4-v150alpha06 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmarkMacroJunit4" }
-androidx-junit-v130 = { module = "androidx.test.ext:junit", version.ref = "junit" }
 kotlin-gradle-plugin           = { group = "org.jetbrains.kotlin",      name = "kotlin-gradle-plugin",           version.ref = "kotlin" }
 
 # JSR-330 (javax.inject) — for @Inject in domain layer without Hilt
