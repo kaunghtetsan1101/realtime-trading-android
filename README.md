@@ -16,7 +16,7 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 | M6 ──► Asset Detail | ✅ Done |
 | M7 ──► Design System + Dark Mode | ✅ Done |
 | M8 ──► Search | ✅ Done |
-| M9 ──► Trading Screen | Pending |
+| M9 ──► Trading Screen + Portfolio | ✅ Done |
 | M10 ──► Settings + Polish | Pending |
 
 ## Tech Stack
@@ -61,6 +61,7 @@ realtime-trading-android/
 ├── feature-watchlist/      # Watchlist screen — MVI ViewModel, UI, contract, tests
 ├── feature-market-detail/  # Asset detail screen — live price ticker, 24h stats
 ├── feature-search/         # Search screen — in-memory filter/sort, debounced query, MVI
+├── feature-trading/        # TradingScreen (BUY/SELL), PortfolioScreen (P&L, order history)
 │
 ├── baseline-profile/       # Generates Baseline Profile (startup + watchlist scroll)
 └── macrobenchmark/         # Macrobenchmarks: cold startup and watchlist frame timing
@@ -71,7 +72,7 @@ realtime-trading-android/
 ```
 app            ──► core-navigation, core-ui, core-common, core-network,
                    core-database, domain, data   (Hilt component aggregation)
-core-navigation──► feature-watchlist, feature-market-detail, feature-search
+core-navigation──► feature-watchlist, feature-market-detail, feature-search, feature-trading
 feature-*      ──► domain, core-ui, core-common
 data           ──► domain, core-network, core-database, core-common
 domain         ──► core-common   (no Android imports)
@@ -165,6 +166,44 @@ Every component has paired `@Preview` annotations for both light and dark to cat
 - Secondary text uses `onSurfaceVariant` (Material3 semantic token) instead of raw `alpha(0.6f)` to guarantee contrast compliance
 - `PercentageBadge` merges its icon + text into one semantics node so screen readers announce it as a single value
 - `PrimaryActionButton` enforces 48 dp minimum touch target height
+
+## Trading & Portfolio (M9)
+
+### Screens
+
+| Screen | Description |
+|--------|-------------|
+| `TradingScreen` | BUY/SELL toggle, quantity input, quick-fill buttons (25 / 50 / 75 / MAX), live price display, order summary card, confirmation `ModalBottomSheet` |
+| `PortfolioScreen` | Total portfolio value card, cash balance, open positions with live unrealised P&L, order history list, per-position "Trade" shortcut |
+
+### Domain models added
+
+| Model | Purpose |
+|-------|---------|
+| `Order` | Placed order record (symbol, side, quantity, price, timestamp) |
+| `Position` | Open position (symbol, quantity, average cost) |
+| `Portfolio` | Snapshot — cash + positions + total value |
+| `ValidationResult` | Sealed result of `ValidateOrderUseCase` (Valid / error variants) |
+
+### Use cases
+
+| Use Case | Behaviour |
+|----------|-----------|
+| `ValidateOrderUseCase` | Pure synchronous validation — checks quantity > 0, sufficient balance (BUY) or position size (SELL) |
+| `PlaceOrderUseCase` | Executes order atomically via `TradeRepository` |
+| `GetPortfolioUseCase` | Combines Room positions with live price flow to compute unrealised P&L reactively |
+| `GetOrderHistoryUseCase` | Streams all placed orders from Room, newest first |
+
+### Database migrations
+
+- `TradingDatabase` version 2 → 3 adds `orders`, `positions`, and `wallet` tables.
+- `WalletEntity` is a single-row table seeded with $10 000 on first access.
+
+### Test coverage (23 cases)
+
+- `ValidateOrderUseCaseTest` — all BUY/SELL error paths + happy paths
+- `PlaceOrderUseCaseTest` — correct order construction, failure propagation, unique ID generation
+- `TradingViewModelTest` — state transitions, real-time validation, order effects
 
 ## Performance
 
@@ -263,7 +302,8 @@ changes are required and it is automatically excluded from release builds.
 
 | Layer | Tool | Location |
 |-------|------|---------|
-| ViewModel state & effects | JUnit + MockK + Turbine | feature-watchlist, feature-market-detail, feature-search |
+| ViewModel state & effects | JUnit + MockK + Turbine | feature-watchlist, feature-market-detail, feature-search, feature-trading |
+| Use case logic | JUnit + MockK | feature-trading (`ValidateOrderUseCaseTest`, `PlaceOrderUseCaseTest`) |
 | Repository logic | JUnit + MockK + Turbine | data |
 | WebSocket flow | Turbine + MockK | core-network |
 | HTTP API parsing | JUnit + MockWebServer | core-network (`MarketApiTest`) |
@@ -318,3 +358,8 @@ significantly faster than cold builds.
 | Design token split | `core-designsystem` + `core-ui` | Tokens (Color, Spacing, Shape) in a Compose-only module; components in `core-ui` which re-exports tokens via `api` dep |
 | `AssetRow` extraction | `core-ui` shared component | Identical row existed in Watchlist and Search; single source of truth eliminates drift |
 | Secondary text colour | `onSurfaceVariant` token | Replaces raw `alpha(0.6f)` — guaranteed contrast in both themes without manual tuning |
+| Atomic order placement | `room.withTransaction` | Wallet debit, position upsert/delete, and order insert execute atomically — partial state is impossible |
+| Seed wallet | Single-row `WalletEntity` ($10 000) | Pre-seeded on first access; avoids a separate onboarding flow for a portfolio demo |
+| `ValidateOrderUseCase` is pure | No I/O, no coroutine | Enables synchronous real-time validation on every keystroke without suspending the ViewModel |
+| `TradingViewModel` assisted inject | `@AssistedInject` + `symbol` param | Passes the asset symbol at runtime without a global state holder or saved-state workaround |
+| Portfolio live P&L | Derived in `GetPortfolioUseCase` | Combines Room positions + live price flow to compute unrealised P&L reactively; no extra DB column |
