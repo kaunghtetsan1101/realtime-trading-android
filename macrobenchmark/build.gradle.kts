@@ -10,6 +10,7 @@ android {
         // Macrobenchmarks require API 29+
         minSdk = 29
         testInstrumentationRunner = "androidx.benchmark.junit4.AndroidBenchmarkRunner"
+        testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] = "LOW-BATTERY"
     }
 
     buildTypes {
@@ -27,6 +28,7 @@ android {
 dependencies {
     implementation(libs.junit.ext)
     implementation(libs.uiautomator)
+    implementation(libs.androidx.benchmark.junit4)
     implementation(libs.androidx.benchmark.macro.junit4)
 }
 

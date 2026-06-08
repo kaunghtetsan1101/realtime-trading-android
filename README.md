@@ -543,14 +543,31 @@ Two macrobenchmarks compare `CompilationMode.None()` (JIT only) vs `CompilationM
 ./gradlew :macrobenchmark:connectedBenchmarkAndroidTest
 ```
 
+The target app uses a `benchmark` build type (release-like, debug-signed) so the APK can install on a physical device. The macrobenchmark module depends on both `benchmark-junit4` (instrumentation runner) and `benchmark-macro-junit4` (macro APIs).
+
+#### Results (OPPO CPH2689, Android 16, 2026-06-08)
+
+Measured on a physical device with 5 iterations per test. Device battery was at 13% (`LOW-BATTERY` suppressed — charge to 25%+ for more reliable numbers).
+
 | Benchmark | CompilationMode.None (JIT) | CompilationMode.Partial (Profile) | Improvement |
 |-----------|---------------------------|-----------------------------------|-------------|
-| Cold startup (ms) | — | — | — |
+| Cold startup TTID median (ms) | 315.7 | 289.1 | ~8% (~27 ms) |
+| Cold startup TTID min / max (ms) | 305.9 / 352.9 | 273.0 / 302.0 | — |
 | Scroll P50 frame (ms) | — | — | — |
 | Scroll P90 frame (ms) | — | — | — |
 | Scroll P99 frame (ms) | — | — | — |
 
-> Run `./gradlew :macrobenchmark:connectedBenchmarkAndroidTest` on a physical device (API 29+, no emulator) and replace `—` with the measured values. Emulators produce unreliable frame timing due to software rendering.
+**Startup:** Baseline Profile reduced median time-to-initial-display from **315.7 ms** to **289.1 ms**.
+
+**Scroll:** `WatchlistScrollBenchmark` did not complete — both scroll tests failed with `StaleObjectException` when UiAutomator held a scrollable node across realtime price updates. Perfetto traces for iteration 0 were captured before failure; frame timing metrics were not recorded.
+
+Raw JSON and Perfetto traces:
+
+```
+macrobenchmark/build/outputs/connected_android_test_additional_output/benchmark/connected/
+```
+
+> Re-run on a charged physical device (API 29+, no emulator) for updated scroll metrics. Emulators produce unreliable frame timing due to software rendering.
 
 ## Setup
 
