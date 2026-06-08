@@ -79,6 +79,21 @@ Captured from the Android emulator. Re-run [`scripts/capture_screenshots.sh`](sc
 |-----------|--------|
 | ![Favorites](docs/screenshots/favorites.png) | ![Search](docs/screenshots/search.png) |
 
+## Demo Video
+
+Full feature walkthrough (~100s) recorded from the Android emulator:
+
+https://github.com/kaunghtetsan1101/realtime-trading-android/raw/main/docs/videos/feature_demo.mp4
+
+**Shown in the demo:** market watch with live price ticks, add-to-favorites, favorites tab, search, asset detail, simulated BUY order with review sheet, portfolio, settings (dark theme toggle).
+
+Re-record with a running emulator (`adb devices`):
+
+```bash
+./scripts/record_feature_demo.sh          # default: emulator-5554
+TIME_LIMIT=120 ./scripts/record_feature_demo.sh emulator-5554
+```
+
 ## Architecture
 
 Clean Architecture with three layers per feature:
