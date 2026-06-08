@@ -69,11 +69,15 @@ core-ui        ──► core-designsystem (api)
 
 ## Screenshots
 
-> Add captures to [`docs/screenshots/`](docs/screenshots/) as `watchlist.png`, `detail.png`, `trading.png`, `portfolio.png`, `settings.png`.
+Captured from the Android emulator. Re-run [`scripts/capture_screenshots.sh`](scripts/capture_screenshots.sh) to refresh.
 
-| Watchlist | Market Detail | Trading | Portfolio | Settings |
-|-----------|--------------|---------|-----------|---------|
-| _(add screenshot)_ | _(add screenshot)_ | _(add screenshot)_ | _(add screenshot)_ | _(add screenshot)_ |
+| Market Watch | Market Detail | Trading | Portfolio | Settings |
+|--------------|---------------|---------|-----------|----------|
+| ![Market Watch](docs/screenshots/watchlist.png) | ![Market Detail](docs/screenshots/detail.png) | ![Trading](docs/screenshots/trading.png) | ![Portfolio](docs/screenshots/portfolio.png) | ![Settings](docs/screenshots/settings.png) |
+
+| Favorites | Search |
+|-----------|--------|
+| ![Favorites](docs/screenshots/favorites.png) | ![Search](docs/screenshots/search.png) |
 
 ## Architecture
 
