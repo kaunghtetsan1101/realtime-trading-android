@@ -3,8 +3,9 @@ package com.tradingapp.navigation
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -25,6 +26,7 @@ import com.tradingapp.settings.SettingsScreen
 import com.tradingapp.trading.PortfolioScreen
 import com.tradingapp.trading.TradingScreen
 import com.tradingapp.trading.TradingViewModel
+import com.tradingapp.watchlist.FavoritesScreen
 import com.tradingapp.watchlist.WatchlistScreen
 
 @Composable
@@ -33,7 +35,9 @@ fun AppNavGraph() {
     val backStack = navViewModel.backStack
 
     val currentRoute = backStack.lastOrNull()
-    val showBottomNav = currentRoute is RouteWatchlist || currentRoute is RoutePortfolio
+    val showBottomNav = currentRoute is RouteWatchlist ||
+        currentRoute is RouteWatchlistFavorites ||
+        currentRoute is RoutePortfolio
 
     Scaffold(
         // Inner feature screens own their TopAppBar + status-bar insets; avoid double top padding.
@@ -46,15 +50,32 @@ fun AppNavGraph() {
                     NavigationBarItem(
                         selected = currentRoute is RouteWatchlist,
                         onClick = {
-                            if (currentRoute !is RouteWatchlist) backStack.removeLastOrNull()
+                            if (currentRoute !is RouteWatchlist) {
+                                backStack.clear()
+                                backStack.add(RouteWatchlist)
+                            }
                         },
-                        icon = { Icon(Icons.Default.ShowChart, contentDescription = null) },
+                        icon = { Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = null) },
                         label = { Text("Market") },
+                    )
+                    NavigationBarItem(
+                        selected = currentRoute is RouteWatchlistFavorites,
+                        onClick = {
+                            if (currentRoute !is RouteWatchlistFavorites) {
+                                backStack.clear()
+                                backStack.add(RouteWatchlistFavorites)
+                            }
+                        },
+                        icon = { Icon(Icons.Default.Bookmark, contentDescription = null) },
+                        label = { Text("Watchlist") },
                     )
                     NavigationBarItem(
                         selected = currentRoute is RoutePortfolio,
                         onClick = {
-                            if (currentRoute !is RoutePortfolio) backStack.add(RoutePortfolio)
+                            if (currentRoute !is RoutePortfolio) {
+                                backStack.clear()
+                                backStack.add(RoutePortfolio)
+                            }
                         },
                         icon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = null) },
                         label = { Text("Portfolio") },
@@ -76,6 +97,13 @@ fun AppNavGraph() {
                     WatchlistScreen(
                         onAssetClick = { symbol -> backStack.add(RouteMarketDetail(symbol)) },
                         onSearchClick = { backStack.add(RouteSearch) },
+                        onSettingsClick = { backStack.add(RouteSettings) },
+                    )
+                }
+
+                entry<RouteWatchlistFavorites> {
+                    FavoritesScreen(
+                        onAssetClick = { symbol -> backStack.add(RouteMarketDetail(symbol)) },
                         onSettingsClick = { backStack.add(RouteSettings) },
                     )
                 }

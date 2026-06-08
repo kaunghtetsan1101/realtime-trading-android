@@ -14,6 +14,9 @@ import kotlinx.serialization.Serializable
 data object RouteWatchlist
 
 @Serializable
+data object RouteWatchlistFavorites
+
+@Serializable
 data class RouteMarketDetail(val symbol: String)
 
 @Serializable

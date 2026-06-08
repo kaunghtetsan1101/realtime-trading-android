@@ -20,6 +20,7 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 | M9 ──► Trading Screen + Portfolio | ✅ Done |
 | M10 ──► Settings + Polish | ✅ Done |
 | M11 ──► Advanced Position Management | ✅ Done |
+| M12 ──► Watchlist Tab (favourites-only bottom nav) | ✅ Done |
 
 ## Tech Stack
 
@@ -28,7 +29,7 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 | Language | Kotlin |
 | Preferences | DataStore Preferences |
 | UI | Jetpack Compose + Material3 |
-| Navigation | Navigation 3 (`androidx.navigation3`) + bottom tab bar (Market / Portfolio) |
+| Navigation | Navigation 3 (`androidx.navigation3`) + bottom tab bar (Market / Watchlist / Portfolio) |
 | Architecture | MVI + Clean Architecture |
 | DI | Hilt |
 | Async | Coroutines + Flow / StateFlow |
@@ -489,9 +490,15 @@ and `PortfolioViewModel` signatures (new `direction` field, 3-arg `placeOrder`, 
 | Piece | Role |
 |-------|------|
 | `NavigationViewModel` | Retains the Navigation 3 back stack across configuration changes |
-| `Route*` serializable keys | Typed destinations (`RouteWatchlist`, `RoutePortfolio`, `RouteMarketDetail`, …) |
+| `Route*` serializable keys | Typed destinations (`RouteWatchlist`, `RouteWatchlistFavorites`, `RoutePortfolio`, `RouteMarketDetail`, …) |
 | `AppNavGraph` | `NavDisplay` + `entryProvider` wiring all feature screens |
-| Bottom `NavigationBar` | **Market** (watchlist root) and **Portfolio** tabs — visible only on those two routes |
+| Bottom `NavigationBar` | **Market**, **Watchlist**, and **Portfolio** tabs — visible only on those three routes |
+
+| Tab | Route | Data source |
+|-----|-------|-------------|
+| Market | `RouteWatchlist` | `observeAssets()` — full asset list with live prices |
+| Watchlist | `RouteWatchlistFavorites` | `observeFavorites()` — saved assets only; empty state when none |
+| Portfolio | `RoutePortfolio` | positions + order history |
 
 Detail flows (asset detail, search, trading, settings) hide the bottom bar and use each screen's
 own `TopAppBar` back affordance.
