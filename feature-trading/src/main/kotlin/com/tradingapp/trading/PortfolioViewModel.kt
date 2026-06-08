@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tradingapp.common.error.ErrorMapper
 import com.tradingapp.domain.model.CloseReason
-import com.tradingapp.domain.model.ValidationResult
 import com.tradingapp.domain.usecase.ClosePositionUseCase
 import com.tradingapp.domain.usecase.EditPositionRiskUseCase
 import com.tradingapp.domain.usecase.GetOrderHistoryUseCase
@@ -12,19 +11,19 @@ import com.tradingapp.domain.usecase.GetPortfolioUseCase
 import com.tradingapp.domain.usecase.MonitorPositionExitUseCase
 import com.tradingapp.domain.usecase.ObserveNetworkStatusUseCase
 import com.tradingapp.domain.usecase.ObservePriceTicksUseCase
-import com.tradingapp.domain.usecase.ValidateTakeProfitStopLossUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.take
@@ -41,7 +40,6 @@ class PortfolioViewModel @Inject constructor(
     private val monitorPositionExit: MonitorPositionExitUseCase,
     private val closePosition: ClosePositionUseCase,
     private val editPositionRisk: EditPositionRiskUseCase,
-    private val validateTpSl: ValidateTakeProfitStopLossUseCase,
 ) : ViewModel() {
 
     private val stateMutable = MutableStateFlow(PortfolioState())
@@ -67,7 +65,11 @@ class PortfolioViewModel @Inject constructor(
             is PortfolioEvent.TradeAsset -> sendEffect(PortfolioEffect.NavigateToTrade(event.symbol))
             is PortfolioEvent.EditPosition -> stateMutable.update { it.copy(editingPosition = event.position) }
             PortfolioEvent.DismissEditPosition -> stateMutable.update { it.copy(editingPosition = null) }
-            is PortfolioEvent.SavePositionRisk -> onSavePositionRisk(event.positionId, event.takeProfitStr, event.stopLossStr)
+            is PortfolioEvent.SavePositionRisk -> onSavePositionRisk(
+                event.positionId,
+                event.takeProfitStr,
+                event.stopLossStr,
+            )
             is PortfolioEvent.ClosePosition -> onClosePosition(event.positionId)
             PortfolioEvent.Retry -> {
                 stateMutable.update { it.copy(error = null, isLoading = true) }
@@ -87,7 +89,12 @@ class PortfolioViewModel @Inject constructor(
             }
             .onEach { portfolio ->
                 stateMutable.update {
-                    it.copy(portfolio = portfolio, isLoading = false, error = null, lastSyncedAt = System.currentTimeMillis())
+                    it.copy(
+                        portfolio = portfolio,
+                        isLoading = false,
+                        error = null,
+                        lastSyncedAt = System.currentTimeMillis(),
+                    )
                 }
             }
             .launchIn(viewModelScope)
@@ -107,12 +114,12 @@ class PortfolioViewModel @Inject constructor(
             .map { it.positions }
             .flatMapLatest { positions ->
                 if (positions.isEmpty()) return@flatMapLatest emptyFlow()
-                merge(*positions.map { position ->
+                positions.asFlow().flatMapMerge { position ->
                     val priceFlow = observePriceTicks(position.symbol).map { it.price }
                     monitorPositionExit(position, priceFlow)
                         .take(1)
                         .map { reason -> Triple(position.id, position.symbol, reason) }
-                }.toTypedArray())
+                }
             }
             .onEach { (positionId, symbol, reason) ->
                 val currentPrice = stateMutable.value.portfolio?.positions
@@ -138,7 +145,8 @@ class PortfolioViewModel @Inject constructor(
     private fun onSavePositionRisk(positionId: String, takeProfitStr: String, stopLossStr: String) {
         val position = stateMutable.value.editingPosition ?: return
         viewModelScope.launch {
-            val result = editPositionRisk(positionId, position.direction, position.averagePrice, takeProfitStr, stopLossStr)
+            val result =
+                editPositionRisk(positionId, position.direction, position.averagePrice, takeProfitStr, stopLossStr)
             result.fold(
                 onSuccess = {
                     stateMutable.update { it.copy(editingPosition = null) }

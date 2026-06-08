@@ -78,7 +78,8 @@ class TradeRepositoryImplTest {
     fun `placeOrder BUY with existing position calculates weighted average price`() = runTest {
         coEvery { walletDao.get() } returns WalletEntity(cashBalance = 10_000.0)
         // Existing: 1.0 BTC @ 50_000
-        coEvery { positionDao.getBySymbol("BTC") } returns PositionEntity("BTC", 1.0, 50_000.0, 0L, "pos-1", "LONG", null, null, 0L)
+        coEvery { positionDao.getBySymbol("BTC") } returns
+            PositionEntity("BTC", 1.0, 50_000.0, 0L, "pos-1", "LONG", null, null, 0L)
 
         val positionSlot = slot<PositionEntity>()
         coEvery { positionDao.upsert(capture(positionSlot)) } returns Unit
@@ -125,7 +126,8 @@ class TradeRepositoryImplTest {
     @Test
     fun `placeOrder SELL partial reduces position quantity and preserves average price`() = runTest {
         coEvery { walletDao.get() } returns WalletEntity(cashBalance = 1_000.0)
-        coEvery { positionDao.getBySymbol("BTC") } returns PositionEntity("BTC", 2.0, 50_000.0, 0L, "pos-2", "LONG", null, null, 0L)
+        coEvery { positionDao.getBySymbol("BTC") } returns
+            PositionEntity("BTC", 2.0, 50_000.0, 0L, "pos-2", "LONG", null, null, 0L)
 
         val positionSlot = slot<PositionEntity>()
         coEvery { positionDao.upsert(capture(positionSlot)) } returns Unit
@@ -139,7 +141,8 @@ class TradeRepositoryImplTest {
     @Test
     fun `placeOrder SELL all quantity deletes position`() = runTest {
         coEvery { walletDao.get() } returns WalletEntity(cashBalance = 1_000.0)
-        coEvery { positionDao.getBySymbol("BTC") } returns PositionEntity("BTC", 1.0, 50_000.0, 0L, "pos-1", "LONG", null, null, 0L)
+        coEvery { positionDao.getBySymbol("BTC") } returns
+            PositionEntity("BTC", 1.0, 50_000.0, 0L, "pos-1", "LONG", null, null, 0L)
 
         repo.placeOrder(sellOrder(qty = 1.0, price = 60_000.0), null, null)
 
@@ -150,7 +153,8 @@ class TradeRepositoryImplTest {
     @Test
     fun `placeOrder SELL credits wallet by totalValue`() = runTest {
         coEvery { walletDao.get() } returns WalletEntity(cashBalance = 1_000.0)
-        coEvery { positionDao.getBySymbol("BTC") } returns PositionEntity("BTC", 1.0, 50_000.0, 0L, "pos-1", "LONG", null, null, 0L)
+        coEvery { positionDao.getBySymbol("BTC") } returns
+            PositionEntity("BTC", 1.0, 50_000.0, 0L, "pos-1", "LONG", null, null, 0L)
 
         val walletSlot = slot<WalletEntity>()
         coEvery { walletDao.upsert(capture(walletSlot)) } returns Unit

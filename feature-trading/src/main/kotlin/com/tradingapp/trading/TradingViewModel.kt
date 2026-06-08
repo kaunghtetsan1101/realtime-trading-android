@@ -8,13 +8,6 @@ import com.tradingapp.domain.model.OrderSide
 import com.tradingapp.domain.model.TradeDirection
 import com.tradingapp.domain.model.ValidationError
 import com.tradingapp.domain.model.ValidationResult
-import com.tradingapp.domain.repository.TradeRepository
-import com.tradingapp.domain.usecase.GetAssetDetailUseCase
-import com.tradingapp.domain.usecase.ObserveNetworkStatusUseCase
-import com.tradingapp.domain.usecase.ObservePriceTicksUseCase
-import com.tradingapp.domain.usecase.PlaceOrderUseCase
-import com.tradingapp.domain.usecase.ValidateOrderUseCase
-import com.tradingapp.domain.usecase.ValidateTakeProfitStopLossUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -33,13 +26,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel(assistedFactory = TradingViewModel.Factory::class)
 class TradingViewModel @AssistedInject constructor(
     @Assisted val symbol: String,
-    private val getAssetDetail: GetAssetDetailUseCase,
-    private val observePriceTicks: ObservePriceTicksUseCase,
-    private val validateOrder: ValidateOrderUseCase,
-    private val validateTpSl: ValidateTakeProfitStopLossUseCase,
-    private val placeOrder: PlaceOrderUseCase,
-    private val tradeRepository: TradeRepository,
-    private val observeNetworkStatus: ObserveNetworkStatusUseCase,
+    private val deps: TradingViewModelDependencies,
 ) : ViewModel() {
 
     @AssistedFactory
@@ -60,7 +47,7 @@ class TradingViewModel @AssistedInject constructor(
         observeLivePrice()
         observeCashBalance()
         observePosition()
-        observeNetworkStatus()
+        deps.observeNetworkStatus()
             .onEach { isOnline -> stateMutable.update { it.copy(isOffline = !isOnline) } }
             .launchIn(viewModelScope)
     }
@@ -85,7 +72,7 @@ class TradingViewModel @AssistedInject constructor(
     private fun loadAsset() {
         loadJob?.cancel()
         stateMutable.update { it.copy(isLoading = true, error = null) }
-        loadJob = getAssetDetail(symbol)
+        loadJob = deps.getAssetDetail(symbol)
             .onEach { result ->
                 when (result) {
                     is Result.Loading -> stateMutable.update { it.copy(isLoading = true) }
@@ -109,7 +96,7 @@ class TradingViewModel @AssistedInject constructor(
     }
 
     private fun observeLivePrice() {
-        observePriceTicks(symbol)
+        deps.observePriceTicks(symbol)
             .onEach { tick ->
                 updateAndValidate { it.copy(currentPrice = tick.price, lastSyncedAt = System.currentTimeMillis()) }
             }
@@ -117,19 +104,28 @@ class TradingViewModel @AssistedInject constructor(
     }
 
     private fun observeCashBalance() {
-        tradeRepository.observeCashBalance()
+        deps.tradeRepository.observeCashBalance()
             .onEach { balance -> updateAndValidate { it.copy(cashBalance = balance) } }
             .launchIn(viewModelScope)
     }
 
     private fun observePosition() {
-        tradeRepository.observePosition(symbol)
+        deps.tradeRepository.observePosition(symbol)
             .onEach { position -> updateAndValidate { it.copy(existingPosition = position) } }
             .launchIn(viewModelScope)
     }
 
     private fun onSideSelected(side: OrderSide) {
-        updateAndValidate { it.copy(selectedSide = side, isReviewVisible = false, takeProfitInput = "", stopLossInput = "", takeProfitError = null, stopLossError = null) }
+        updateAndValidate {
+            it.copy(
+                selectedSide = side,
+                isReviewVisible = false,
+                takeProfitInput = "",
+                stopLossInput = "",
+                takeProfitError = null,
+                stopLossError = null,
+            )
+        }
     }
 
     private fun onTakeProfitChanged(input: String) {
@@ -145,7 +141,13 @@ class TradingViewModel @AssistedInject constructor(
     private fun sanitizeDecimalInput(input: String): String {
         val s = input.filter { it.isDigit() || it == '.' }
         val dotIndex = s.indexOf('.')
-        return if (dotIndex == -1) s else s.substring(0, dotIndex + 1) + s.substring(dotIndex + 1).filter { it.isDigit() }
+        return if (dotIndex ==
+            -1
+        ) {
+            s
+        } else {
+            s.substring(0, dotIndex + 1) + s.substring(dotIndex + 1).filter { it.isDigit() }
+        }
     }
 
     private fun onQuantityChanged(input: String) {
@@ -176,7 +178,7 @@ class TradingViewModel @AssistedInject constructor(
         val qty = s.quantityInput.toDoubleOrNull() ?: return
         stateMutable.update { it.copy(isPlacingOrder = true) }
         viewModelScope.launch {
-            placeOrder(
+            deps.placeOrder(
                 side = s.selectedSide,
                 symbol = symbol,
                 quantity = qty,
@@ -185,7 +187,14 @@ class TradingViewModel @AssistedInject constructor(
                 stopLoss = s.stopLossInput.toDoubleOrNull(),
             ).fold(
                 onSuccess = {
-                    stateMutable.update { it.copy(isPlacingOrder = false, isReviewVisible = false, takeProfitInput = "", stopLossInput = "") }
+                    stateMutable.update {
+                        it.copy(
+                            isPlacingOrder = false,
+                            isReviewVisible = false,
+                            takeProfitInput = "",
+                            stopLossInput = "",
+                        )
+                    }
                     sendEffect(TradingEffect.ShowSnackbar("Order placed — check your portfolio"))
                 },
                 onFailure = { error ->
@@ -212,7 +221,7 @@ class TradingViewModel @AssistedInject constructor(
         val qty = s.quantityInput
         if (qty.isBlank()) return null
         return when (
-            val result = validateOrder(
+            val result = deps.validateOrder(
                 side = s.selectedSide,
                 quantityStr = qty,
                 currentPrice = s.currentPrice,
@@ -229,10 +238,9 @@ class TradingViewModel @AssistedInject constructor(
         val entryPrice = s.currentPrice
         if (entryPrice <= 0.0) return null to null
         val direction = if (s.selectedSide == OrderSide.BUY) TradeDirection.LONG else TradeDirection.SHORT
-        val result = validateTpSl(direction, entryPrice, s.takeProfitInput, s.stopLossInput)
+        val result = deps.validateTpSl(direction, entryPrice, s.takeProfitInput, s.stopLossInput)
         if (result == ValidationResult.Valid) return null to null
-        val error = (result as ValidationResult.Invalid).error
-        return when (error) {
+        return when (val error = (result as ValidationResult.Invalid).error) {
             ValidationError.TAKE_PROFIT_MUST_BE_ABOVE_ENTRY,
             ValidationError.TAKE_PROFIT_MUST_BE_BELOW_ENTRY,
             ValidationError.INVALID_TAKE_PROFIT,

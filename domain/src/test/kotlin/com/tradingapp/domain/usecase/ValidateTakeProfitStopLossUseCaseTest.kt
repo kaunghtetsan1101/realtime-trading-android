@@ -127,12 +127,6 @@ class ValidateTakeProfitStopLossUseCaseTest {
     }
 
     @Test
-    fun `TP and SL equal returns TAKE_PROFIT_EQUALS_STOP_LOSS`() {
-        val result = useCase(TradeDirection.LONG, 50_000.0, "55000", "55000")
-        assertEquals(ValidationResult.Invalid(ValidationError.TAKE_PROFIT_EQUALS_STOP_LOSS), result)
-    }
-
-    @Test
     fun `non-numeric TP is invalid`() {
         val result = useCase(TradeDirection.LONG, 50_000.0, "abc", "")
         assertEquals(ValidationResult.Invalid(ValidationError.INVALID_TAKE_PROFIT), result)

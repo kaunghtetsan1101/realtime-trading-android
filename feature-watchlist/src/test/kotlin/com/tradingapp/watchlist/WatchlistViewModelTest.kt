@@ -144,7 +144,7 @@ class WatchlistViewModelTest {
         val assets = listOf(fakeAsset("BTC"))
         every { getWatchlist() } returns flowOf(Result.Success(assets))
         coEvery { syncAssets() } returnsMany listOf(
-            kotlin.Result.success(Unit),        // initial sync in init
+            kotlin.Result.success(Unit), // initial sync in init
             kotlin.Result.failure(RuntimeException("Connection refused")), // explicit refresh
         )
 

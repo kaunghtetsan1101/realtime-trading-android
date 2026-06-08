@@ -18,7 +18,8 @@ sealed interface PortfolioEvent {
     data class TradeAsset(val symbol: String) : PortfolioEvent
     data class EditPosition(val position: Position) : PortfolioEvent
     data class ClosePosition(val positionId: String) : PortfolioEvent
-    data class SavePositionRisk(val positionId: String, val takeProfitStr: String, val stopLossStr: String) : PortfolioEvent
+    data class SavePositionRisk(val positionId: String, val takeProfitStr: String, val stopLossStr: String) :
+        PortfolioEvent
     data object DismissEditPosition : PortfolioEvent
     data object Retry : PortfolioEvent
 }

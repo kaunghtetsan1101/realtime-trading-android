@@ -33,7 +33,7 @@ class GetFavoritesUseCaseTest {
     @Test
     fun `emits Error when repository throws`() = runTest {
         every { repository.observeFavorites() } returns kotlinx.coroutines.flow.flow {
-            throw RuntimeException("DB error")
+            throw IllegalStateException("DB error")
         }
 
         useCase().test {

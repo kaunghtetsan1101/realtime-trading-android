@@ -42,64 +42,83 @@ open class TradeRepositoryImpl @Inject constructor(
     override suspend fun placeOrder(order: Order, takeProfit: Double?, stopLoss: Double?): Result<Order> = runCatching {
         withContext(dispatchers.io) {
             runInTransaction {
-                val wallet = walletDao.get() ?: WalletEntity(cashBalance = WalletEntity.INITIAL_BALANCE)
-
-                val newBalance = when (order.side) {
-                    OrderSide.BUY -> wallet.cashBalance - order.totalValue
-                    OrderSide.SELL -> wallet.cashBalance + order.totalValue
-                }
-                walletDao.upsert(wallet.copy(cashBalance = newBalance))
-
-                val existing = positionDao.getBySymbol(order.symbol)
-                when (order.side) {
-                    OrderSide.BUY -> {
-                        val newQty = (existing?.quantity ?: 0.0) + order.quantity
-                        val newAvgPrice = if (existing != null) {
-                            (existing.quantity * existing.avgPrice + order.quantity * order.price) /
-                                (existing.quantity + order.quantity)
-                        } else {
-                            order.price
-                        }
-                        positionDao.upsert(
-                            PositionEntity(
-                                id = existing?.id?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString(),
-                                symbol = order.symbol,
-                                direction = TradeDirection.LONG.name,
-                                quantity = newQty,
-                                avgPrice = newAvgPrice,
-                                takeProfit = takeProfit ?: existing?.takeProfit,
-                                stopLoss = stopLoss ?: existing?.stopLoss,
-                                openedAt = existing?.openedAt ?: order.timestamp,
-                                updatedAt = order.timestamp,
-                            ),
-                        )
-                    }
-                    OrderSide.SELL -> {
-                        val newQty = (existing?.quantity ?: 0.0) - order.quantity
-                        if (newQty <= 0.0) {
-                            positionDao.deleteBySymbol(order.symbol)
-                        } else {
-                            positionDao.upsert(
-                                PositionEntity(
-                                    id = existing?.id?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString(),
-                                    symbol = order.symbol,
-                                    direction = existing?.direction ?: TradeDirection.SHORT.name,
-                                    quantity = newQty,
-                                    avgPrice = existing?.avgPrice ?: order.price,
-                                    takeProfit = takeProfit ?: existing?.takeProfit,
-                                    stopLoss = stopLoss ?: existing?.stopLoss,
-                                    openedAt = existing?.openedAt ?: order.timestamp,
-                                    updatedAt = order.timestamp,
-                                ),
-                            )
-                        }
-                    }
-                }
-
+                updateWalletForOrder(order)
+                updatePositionForOrder(order, takeProfit, stopLoss)
                 orderDao.insert(order.toEntity())
                 order
             }
         }
+    }
+
+    private suspend fun updateWalletForOrder(order: Order) {
+        val wallet = walletDao.get() ?: WalletEntity(cashBalance = WalletEntity.INITIAL_BALANCE)
+        val newBalance = when (order.side) {
+            OrderSide.BUY -> wallet.cashBalance - order.totalValue
+            OrderSide.SELL -> wallet.cashBalance + order.totalValue
+        }
+        walletDao.upsert(wallet.copy(cashBalance = newBalance))
+    }
+
+    private suspend fun updatePositionForOrder(order: Order, takeProfit: Double?, stopLoss: Double?) {
+        val existing = positionDao.getBySymbol(order.symbol)
+        when (order.side) {
+            OrderSide.BUY -> applyBuyOrder(order, existing, takeProfit, stopLoss)
+            OrderSide.SELL -> applySellOrder(order, existing, takeProfit, stopLoss)
+        }
+    }
+
+    private suspend fun applyBuyOrder(
+        order: Order,
+        existing: PositionEntity?,
+        takeProfit: Double?,
+        stopLoss: Double?,
+    ) {
+        val newQty = (existing?.quantity ?: 0.0) + order.quantity
+        val newAvgPrice = if (existing != null) {
+            (existing.quantity * existing.avgPrice + order.quantity * order.price) /
+                (existing.quantity + order.quantity)
+        } else {
+            order.price
+        }
+        positionDao.upsert(
+            PositionEntity(
+                id = existing?.id?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString(),
+                symbol = order.symbol,
+                direction = TradeDirection.LONG.name,
+                quantity = newQty,
+                avgPrice = newAvgPrice,
+                takeProfit = takeProfit ?: existing?.takeProfit,
+                stopLoss = stopLoss ?: existing?.stopLoss,
+                openedAt = existing?.openedAt ?: order.timestamp,
+                updatedAt = order.timestamp,
+            ),
+        )
+    }
+
+    private suspend fun applySellOrder(
+        order: Order,
+        existing: PositionEntity?,
+        takeProfit: Double?,
+        stopLoss: Double?,
+    ) {
+        val newQty = (existing?.quantity ?: 0.0) - order.quantity
+        if (newQty <= 0.0) {
+            positionDao.deleteBySymbol(order.symbol)
+            return
+        }
+        positionDao.upsert(
+            PositionEntity(
+                id = existing?.id?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString(),
+                symbol = order.symbol,
+                direction = existing?.direction ?: TradeDirection.SHORT.name,
+                quantity = newQty,
+                avgPrice = existing?.avgPrice ?: order.price,
+                takeProfit = takeProfit ?: existing?.takeProfit,
+                stopLoss = stopLoss ?: existing?.stopLoss,
+                openedAt = existing?.openedAt ?: order.timestamp,
+                updatedAt = order.timestamp,
+            ),
+        )
     }
 
     override fun observeOrders(): Flow<List<Order>> =
@@ -135,7 +154,9 @@ open class TradeRepositoryImpl @Inject constructor(
             withContext(dispatchers.io) {
                 runInTransaction {
                     val entity = positionDao.getById(positionId) ?: return@runInTransaction
-                    val direction = runCatching { TradeDirection.valueOf(entity.direction) }.getOrDefault(TradeDirection.LONG)
+                    val direction = runCatching {
+                        TradeDirection.valueOf(entity.direction)
+                    }.getOrDefault(TradeDirection.LONG)
                     val realizedPnL = when (direction) {
                         TradeDirection.LONG -> (closePrice - entity.avgPrice) * entity.quantity
                         TradeDirection.SHORT -> (entity.avgPrice - closePrice) * entity.quantity

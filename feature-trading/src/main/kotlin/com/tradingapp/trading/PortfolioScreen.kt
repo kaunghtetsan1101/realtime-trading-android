@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -66,10 +65,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun PortfolioScreen(
-    onNavigateToTrade: (String) -> Unit,
-    viewModel: PortfolioViewModel = hiltViewModel(),
-) {
+fun PortfolioScreen(onNavigateToTrade: (String) -> Unit, viewModel: PortfolioViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHost = remember { SnackbarHostState() }
 
@@ -169,7 +165,6 @@ private fun PortfolioBody(state: PortfolioState, onEvent: (PortfolioEvent) -> Un
                 items(portfolio.positions, key = { it.id.ifBlank { it.symbol } }) { position ->
                     PositionRow(
                         position = position,
-                        onTradeClick = { onEvent(PortfolioEvent.TradeAsset(position.symbol)) },
                         onEditClick = { onEvent(PortfolioEvent.EditPosition(position)) },
                         onCloseClick = { onEvent(PortfolioEvent.ClosePosition(position.id)) },
                         modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
@@ -270,7 +265,6 @@ private fun CashBalanceCard(balance: Double, modifier: Modifier = Modifier) {
 @Composable
 private fun PositionRow(
     position: Position,
-    onTradeClick: () -> Unit,
     onEditClick: () -> Unit,
     onCloseClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -285,7 +279,10 @@ private fun PositionRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
                 Text(position.symbol, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text(
                     directionLabel,
@@ -304,7 +301,10 @@ private fun PositionRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = pnlColor,
                 )
-                PercentageBadge(changePercent = position.unrealizedPnLPct, textStyle = MaterialTheme.typography.labelSmall)
+                PercentageBadge(
+                    changePercent = position.unrealizedPnLPct,
+                    textStyle = MaterialTheme.typography.labelSmall,
+                )
             }
         }
 
@@ -315,7 +315,8 @@ private fun PositionRow(
         ) {
             Column {
                 Text(
-                    "Qty: ${TradingViewModel.formatQuantity(position.quantity)}  Entry: ${formatUsd(position.averagePrice)}",
+                    text = "Qty: ${TradingViewModel.formatQuantity(position.quantity)}  " +
+                        "Entry: ${formatUsd(position.averagePrice)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -354,8 +355,17 @@ private fun EditPositionDialog(
     var tpInput by rememberSaveable { mutableStateOf(position.takeProfit?.let { "%.2f".format(it) } ?: "") }
     var slInput by rememberSaveable { mutableStateOf(position.stopLoss?.let { "%.2f".format(it) } ?: "") }
     val directionLabel = if (position.direction == TradeDirection.LONG) "LONG" else "SHORT"
-    val tpHint = if (position.direction == TradeDirection.LONG) "above ${formatUsd(position.averagePrice)}" else "below ${formatUsd(position.averagePrice)}"
-    val slHint = if (position.direction == TradeDirection.LONG) "below ${formatUsd(position.averagePrice)}" else "above ${formatUsd(position.averagePrice)}"
+    val entryPrice = formatUsd(position.averagePrice)
+    val tpHint = if (position.direction == TradeDirection.LONG) {
+        "above $entryPrice"
+    } else {
+        "below $entryPrice"
+    }
+    val slHint = if (position.direction == TradeDirection.LONG) {
+        "below $entryPrice"
+    } else {
+        "above $entryPrice"
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -488,8 +498,14 @@ private fun formatTimestamp(ms: Long): String = SimpleDateFormat("MMM d, HH:mm",
 private fun fakePortfolio() = Portfolio(
     cashBalance = 2_450.23,
     positions = listOf(
-        Position("pos-1", "BTC", TradeDirection.LONG, 0.1483, 65_000.0, 70_000.0, 63_000.0, 0L, 67_234.5, 9_971.8, 330.8, 0.51),
-        Position("pos-2", "ETH", TradeDirection.SHORT, 1.2, 3_000.0, null, null, 0L, 3_200.0, 3_840.0, 240.0, 6.67),
+        Position(
+            "pos-1", "BTC", TradeDirection.LONG, 0.1483, 65_000.0, 70_000.0, 63_000.0,
+            0L, 67_234.5, 9_971.8, 330.8, 0.51,
+        ),
+        Position(
+            "pos-2", "ETH", TradeDirection.SHORT, 1.2, 3_000.0, null, null,
+            0L, 3_200.0, 3_840.0, 240.0, 6.67,
+        ),
     ),
     totalValue = 16_262.03,
     totalUnrealizedPnL = 570.8,

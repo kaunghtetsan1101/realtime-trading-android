@@ -47,6 +47,16 @@ class TradingViewModelTest {
     private val tradeRepository: TradeRepository = mockk()
     private val observeNetworkStatus: ObserveNetworkStatusUseCase = mockk()
 
+    private fun tradingDependencies() = TradingViewModelDependencies(
+        getAssetDetail = getAssetDetail,
+        observePriceTicks = observePriceTicks,
+        validateOrder = validateOrder,
+        validateTpSl = validateTpSl,
+        placeOrder = placeOrder,
+        tradeRepository = tradeRepository,
+        observeNetworkStatus = observeNetworkStatus,
+    )
+
     private fun buildViewModel(assetPrice: Double = 0.0, cashBalance: Double = 10_000.0): TradingViewModel {
         every { getAssetDetail(any()) } returns flowOf(
             if (assetPrice > 0) Result.Success(fakeAsset(price = assetPrice)) else Result.Loading,
@@ -57,13 +67,7 @@ class TradingViewModelTest {
         every { observeNetworkStatus() } returns flowOf(true)
         return TradingViewModel(
             symbol = "BTC",
-            getAssetDetail = getAssetDetail,
-            observePriceTicks = observePriceTicks,
-            validateOrder = validateOrder,
-            validateTpSl = validateTpSl,
-            placeOrder = placeOrder,
-            tradeRepository = tradeRepository,
-            observeNetworkStatus = observeNetworkStatus,
+            deps = tradingDependencies(),
         )
     }
 
@@ -125,16 +129,7 @@ class TradingViewModelTest {
             ValidationResult.Invalid(ValidationError.INSUFFICIENT_BALANCE)
         every { observeNetworkStatus() } returns flowOf(true)
 
-        val vm = TradingViewModel(
-            symbol = "BTC",
-            getAssetDetail = getAssetDetail,
-            observePriceTicks = observePriceTicks,
-            validateOrder = validateOrder,
-            validateTpSl = validateTpSl,
-            placeOrder = placeOrder,
-            tradeRepository = tradeRepository,
-            observeNetworkStatus = observeNetworkStatus,
-        )
+        val vm = TradingViewModel(symbol = "BTC", deps = tradingDependencies())
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.onEvent(TradingEvent.QuantityChanged("1.0"))
@@ -175,19 +170,13 @@ class TradingViewModelTest {
         every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
         every { observeNetworkStatus() } returns flowOf(true)
 
-        val fakeOrder = Order("1", "BTC", OrderSide.BUY, com.tradingapp.domain.model.TradeDirection.LONG, 0.1, 60_000.0, 6_000.0, OrderStatus.FILLED, 0L)
+        val fakeOrder = Order(
+            "1", "BTC", OrderSide.BUY, com.tradingapp.domain.model.TradeDirection.LONG,
+            0.1, 60_000.0, 6_000.0, OrderStatus.FILLED, 0L,
+        )
         coEvery { placeOrder(any(), any(), any(), any(), any(), any()) } returns kotlin.Result.success(fakeOrder)
 
-        val vm = TradingViewModel(
-            symbol = "BTC",
-            getAssetDetail = getAssetDetail,
-            observePriceTicks = observePriceTicks,
-            validateOrder = validateOrder,
-            validateTpSl = validateTpSl,
-            placeOrder = placeOrder,
-            tradeRepository = tradeRepository,
-            observeNetworkStatus = observeNetworkStatus,
-        )
+        val vm = TradingViewModel(symbol = "BTC", deps = tradingDependencies())
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.onEvent(TradingEvent.QuantityChanged("0.1"))
@@ -218,16 +207,7 @@ class TradingViewModelTest {
         coEvery { placeOrder(any(), any(), any(), any(), any(), any()) } returns
             kotlin.Result.failure(RuntimeException("Insufficient funds"))
 
-        val vm = TradingViewModel(
-            symbol = "BTC",
-            getAssetDetail = getAssetDetail,
-            observePriceTicks = observePriceTicks,
-            validateOrder = validateOrder,
-            validateTpSl = validateTpSl,
-            placeOrder = placeOrder,
-            tradeRepository = tradeRepository,
-            observeNetworkStatus = observeNetworkStatus,
-        )
+        val vm = TradingViewModel(symbol = "BTC", deps = tradingDependencies())
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.onEvent(TradingEvent.QuantityChanged("0.1"))
@@ -268,16 +248,7 @@ class TradingViewModelTest {
         every { tradeRepository.observePosition(any()) } returns flowOf(null)
         every { observeNetworkStatus() } returns flowOf(true)
 
-        val vm = TradingViewModel(
-            symbol = "BTC",
-            getAssetDetail = getAssetDetail,
-            observePriceTicks = observePriceTicks,
-            validateOrder = validateOrder,
-            validateTpSl = validateTpSl,
-            placeOrder = placeOrder,
-            tradeRepository = tradeRepository,
-            observeNetworkStatus = observeNetworkStatus,
-        )
+        val vm = TradingViewModel(symbol = "BTC", deps = tradingDependencies())
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.onEvent(TradingEvent.Retry)
@@ -297,16 +268,7 @@ class TradingViewModelTest {
         every { observeNetworkStatus() } returns flowOf(true)
         every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
 
-        val vm = TradingViewModel(
-            symbol = "BTC",
-            getAssetDetail = getAssetDetail,
-            observePriceTicks = observePriceTicks,
-            validateOrder = validateOrder,
-            validateTpSl = validateTpSl,
-            placeOrder = placeOrder,
-            tradeRepository = tradeRepository,
-            observeNetworkStatus = observeNetworkStatus,
-        )
+        val vm = TradingViewModel(symbol = "BTC", deps = tradingDependencies())
         testDispatcher.scheduler.advanceUntilIdle()
 
         tickFlow.emit(PriceTick("BTC", 65_000.0, 0L))
@@ -324,16 +286,7 @@ class TradingViewModelTest {
         every { observeNetworkStatus() } returns flowOf(true)
         every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
 
-        val vm = TradingViewModel(
-            symbol = "BTC",
-            getAssetDetail = getAssetDetail,
-            observePriceTicks = observePriceTicks,
-            validateOrder = validateOrder,
-            validateTpSl = validateTpSl,
-            placeOrder = placeOrder,
-            tradeRepository = tradeRepository,
-            observeNetworkStatus = observeNetworkStatus,
-        )
+        val vm = TradingViewModel(symbol = "BTC", deps = tradingDependencies())
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.onEvent(TradingEvent.QuickFillSelected(0.5))
@@ -345,7 +298,13 @@ class TradingViewModelTest {
 
     @Test
     fun `QuickFillSelected MAX fills all available position for SELL`() = runTest {
-        val position = com.tradingapp.domain.model.Position("p1", "BTC", com.tradingapp.domain.model.TradeDirection.LONG, 2.0, 50_000.0)
+        val position = com.tradingapp.domain.model.Position(
+            "p1",
+            "BTC",
+            com.tradingapp.domain.model.TradeDirection.LONG,
+            2.0,
+            50_000.0,
+        )
         every { getAssetDetail(any()) } returns flowOf(Result.Success(fakeAsset(price = 60_000.0)))
         every { observePriceTicks(any()) } returns emptyFlow()
         every { tradeRepository.observeCashBalance() } returns flowOf(1_000.0)
@@ -353,16 +312,7 @@ class TradingViewModelTest {
         every { observeNetworkStatus() } returns flowOf(true)
         every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
 
-        val vm = TradingViewModel(
-            symbol = "BTC",
-            getAssetDetail = getAssetDetail,
-            observePriceTicks = observePriceTicks,
-            validateOrder = validateOrder,
-            validateTpSl = validateTpSl,
-            placeOrder = placeOrder,
-            tradeRepository = tradeRepository,
-            observeNetworkStatus = observeNetworkStatus,
-        )
+        val vm = TradingViewModel(symbol = "BTC", deps = tradingDependencies())
         testDispatcher.scheduler.advanceUntilIdle()
 
         vm.onEvent(TradingEvent.SideSelected(OrderSide.SELL))
@@ -405,16 +355,7 @@ class TradingViewModelTest {
         every { tradeRepository.observePosition(any()) } returns flowOf(null)
         every { observeNetworkStatus() } returns networkFlow
 
-        val vm = TradingViewModel(
-            symbol = "BTC",
-            getAssetDetail = getAssetDetail,
-            observePriceTicks = observePriceTicks,
-            validateOrder = validateOrder,
-            validateTpSl = validateTpSl,
-            placeOrder = placeOrder,
-            tradeRepository = tradeRepository,
-            observeNetworkStatus = observeNetworkStatus,
-        )
+        val vm = TradingViewModel(symbol = "BTC", deps = tradingDependencies())
         testDispatcher.scheduler.advanceUntilIdle()
         assertFalse(vm.state.value.isOffline)
 

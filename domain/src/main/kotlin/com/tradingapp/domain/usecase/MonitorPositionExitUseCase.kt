@@ -9,10 +9,9 @@ import kotlinx.coroutines.flow.mapNotNull
 import javax.inject.Inject
 
 class MonitorPositionExitUseCase @Inject constructor() {
-    operator fun invoke(position: Position, priceFlow: Flow<Double>): Flow<CloseReason> =
-        priceFlow
-            .distinctUntilChanged()
-            .mapNotNull { price -> checkExit(position, price) }
+    operator fun invoke(position: Position, priceFlow: Flow<Double>): Flow<CloseReason> = priceFlow
+        .distinctUntilChanged()
+        .mapNotNull { price -> checkExit(position, price) }
 
     private fun checkExit(position: Position, price: Double): CloseReason? {
         val tp = position.takeProfit
