@@ -6,6 +6,9 @@ Realtime Trading Android follows Clean Architecture with feature-based modules. 
 Jetpack Compose + MVI. Realtime prices arrive via a Binance WebSocket and are persisted to
 Room, which is the single source of truth for every screen.
 
+Simulated trading (orders, positions, wallet, TP/SL) is also persisted in Room and updated
+atomically inside transactions.
+
 ---
 
 ## Module Dependency Graph
@@ -13,36 +16,38 @@ Room, which is the single source of truth for every screen.
 ```
 app
  └── core-navigation
-      ├── feature-watchlist
-      │    ├── domain          ← use cases + repository interfaces
-      │    ├── core-ui         ← shared Compose components, theme
-      │    └── core-common     ← Result<T>, DispatcherProvider
+      ├── feature-watchlist       (Market tab + Favorites tab ViewModels)
       ├── feature-market-detail
-      │    ├── domain
-      │    ├── core-ui
-      │    └── core-common
-      └── feature-search
-           ├── domain
-           ├── core-ui
-           └── core-common
+      ├── feature-search
+      ├── feature-trading         (TradingScreen + PortfolioScreen)
+      └── feature-settings
+           ├── domain             ← use cases + repository interfaces
+           ├── core-ui            ← shared Compose components, theme wrapper
+           ├── core-designsystem  ← Color, Typography, Spacing, Shape tokens
+           └── core-common        ← Result<T>, DispatcherProvider, ErrorMapper
 
 app (Hilt aggregation)
- ├── data            ← repository implementations, mappers
- │    ├── core-network   ← Retrofit, OkHttp, WebSocketManager
- │    ├── core-database  ← Room DB, DAOs
+ ├── data                 ← repository implementations, mappers
+ │    ├── core-network    ← Retrofit, OkHttp, WebSocketManager, NetworkMonitor
+ │    ├── core-database   ← Room DB, DAOs, migrations
  │    ├── domain
  │    └── core-common
+ ├── core-datastore       ← ThemeMode + verbose logging (Preferences DataStore)
  ├── core-network
  ├── core-database
  ├── domain
  └── core-common
+
+baseline-profile / macrobenchmark  → target :app (test-only modules)
 ```
 
 **Rules enforced by module boundaries:**
+
 - `domain` and `core-common` are pure Kotlin JVM — zero Android imports.
 - Feature modules depend on `domain` only — no direct data/network access.
-- `core-navigation` depends on all feature modules; no feature depends on another.
-- `app` is the only module that depends on everything (for Hilt component aggregation).
+- `core-navigation` depends on all feature modules; no feature depends on another feature.
+- `core-ui` exposes `core-designsystem` via `api` so features get tokens transitively.
+- `app` is the only module that depends on everything (Hilt component aggregation).
 
 ---
 
@@ -53,7 +58,32 @@ app (Hilt aggregation)
 | Presentation | `feature-*`, `core-navigation`, `app` | Compose UI, ViewModels, MVI contracts, navigation |
 | Domain | `domain` | Pure use cases, repository interfaces, domain models |
 | Data | `data`, `core-network`, `core-database` | Repository implementations, mappers, REST/WS, Room |
-| Infrastructure | `core-common`, `core-ui` | Cross-cutting utilities, shared Compose components |
+| Infrastructure | `core-common`, `core-ui`, `core-designsystem`, `core-datastore` | Cross-cutting utilities, design tokens, preferences |
+
+---
+
+## Navigation
+
+Navigation 3 (`androidx.navigation3`) lives in `core-navigation`. Routes are `@Serializable`
+keys on the back stack — no string templates or `SavedStateHandle` lookups.
+
+| Route | Screen | Notes |
+|-------|--------|-------|
+| `RouteWatchlist` | Market tab — full asset list | `GetWatchlistUseCase` |
+| `RouteWatchlistFavorites` | Watchlist tab — favourites only | `GetFavoritesUseCase` |
+| `RoutePortfolio` | Portfolio tab | positions + order history |
+| `RouteMarketDetail(symbol)` | Asset detail | pushed onto back stack |
+| `RouteSearch` | Search | pushed onto back stack |
+| `RouteTrading(symbol)` | BUY/SELL screen | pushed onto back stack |
+| `RouteSettings` | Theme + developer options | pushed onto back stack |
+
+`NavigationViewModel` retains the back stack across configuration changes. The bottom
+`NavigationBar` (Market / Watchlist / Portfolio) is visible only on the three tab routes;
+detail flows use each screen's own `TopAppBar` back affordance.
+
+`MainActivity` calls `enableEdgeToEdge()`. The outer `Scaffold` in `AppNavGraph` uses
+`contentWindowInsets = WindowInsets(0)` so status-bar insets are not applied twice when
+feature screens own their own scaffold.
 
 ---
 
@@ -86,6 +116,21 @@ semantics guarantee navigation and snackbar events are not replayed on recomposi
 
 ---
 
+## Design System
+
+Design tokens and components are split across two modules:
+
+| Module | Role |
+|--------|------|
+| `core-designsystem` | Pure tokens — `Color`, `Typography`, `Spacing`, `Shape`; no composable logic |
+| `core-ui` | `TradingAppTheme`, `AssetRow`, `PriceText`, `PercentageBadge`, `OfflineBanner`, `ErrorState`, `EmptyState` |
+
+`MainActivity` reads `ThemeMode` from DataStore and passes the resolved dark/light flag into
+`TradingAppTheme`. Components use Material3 semantic colours (`onSurfaceVariant`, `PriceUp`,
+`PriceDown`) rather than hard-coded alpha values.
+
+---
+
 ## Data Flow: Live Price Updates
 
 ```
@@ -111,9 +156,10 @@ priceTicksMutable: MutableSharedFlow (replay=1, DROP_OLDEST)
                                 │
                                 ▼
 Room emits updated rows to all active flows
-  ├── observeAssets()   → WatchlistViewModel
-  ├── observeAsset(sym) → MarketDetailViewModel
-  └── observeFavorites() → (future use)
+  ├── observeAssets()      → WatchlistViewModel (Market tab)
+  ├── observeFavorites()   → FavoritesViewModel (Watchlist tab)
+  ├── observeAsset(sym)    → MarketDetailViewModel
+  └── (price ticks)        → PortfolioViewModel unrealised P&L
                                 │
                                 ▼
               UI re-renders with new price (key-stable LazyColumn)
@@ -141,6 +187,7 @@ ViewModels set `state.isOffline = true`, which shows the `OfflineBanner` with a
 ```
 
 Key design choices:
+
 - `SupervisorJob`: a WebSocket error never cancels unrelated repository coroutines.
 - `replay=1` on `priceTicksMutable`: the detail screen gets the last price immediately on open.
 - `DROP_OLDEST` overflow: back-pressure from a slow collector never stalls the pump.
@@ -169,13 +216,69 @@ immediately so the `TextField` stays responsive.
 
 ---
 
+## Trading & Portfolio
+
+All trading is client-side simulation — no broker API. State lives in Room:
+
+| Table | Purpose |
+|-------|---------|
+| `wallet` | Single-row virtual cash balance (seeded $10 000) |
+| `positions` | Open positions with direction, avg cost, optional TP/SL |
+| `orders` | Placed and closed order history with realised P&L |
+
+**Order placement flow:**
+
+```
+TradingViewModel.onEvent(ConfirmOrder)
+  → ValidateOrderUseCase        (sync, pure — balance / quantity checks)
+  → PlaceOrderUseCase
+      → TradeRepositoryImpl.placeOrder()
+          room.withTransaction { debit wallet, upsert/delete position, insert order }
+```
+
+`TradingViewModel` uses `@AssistedInject` to receive the asset `symbol` at navigation time.
+Validation runs on every keystroke; a confirmation bottom sheet gates the final submit.
+
+**Portfolio TP/SL auto-exit:**
+
+```
+PortfolioViewModel.monitorExits()
+  getPortfolio().map { positions }
+    .flatMapLatest { rebuild when list changes }
+      .flatMapMerge { per-position price tick flow }
+        monitorPositionExit(position, priceFlow).take(1)
+          → ClosePositionUseCase on TP/SL trigger
+          → ShowSnackbar effect
+```
+
+`flatMapLatest` cancels stale monitors when positions open or close. `take(1)` prevents
+double-trigger if price oscillates around a threshold. Monitoring runs in `viewModelScope`
+and stops when the Portfolio screen leaves the back stack.
+
+Unrealised P&L is derived reactively in `GetPortfolioUseCase` by combining Room positions
+with live price ticks — no extra DB column.
+
+---
+
+## Settings & Preferences
+
+`core-datastore` wraps Preferences DataStore for:
+
+- `ThemeMode` — System / Light / Dark (read in `MainActivity`, applied to `TradingAppTheme`)
+- Verbose logging flag — controls Timber tree planting on next cold start
+
+`SettingsViewModel` exposes MVI state for the settings screen; `AppInfo` (version name) is
+provided by an `app`-module Hilt binding because only `app` knows `BuildConfig.VERSION_NAME`.
+
+---
+
 ## Testing Strategy
 
 | Layer | Tool | What is tested |
 |-------|------|----------------|
-| ViewModel | JUnit + MockK + Turbine | State transitions, effect delivery, debounce |
-| Repository | JUnit + MockK + Turbine | Sync logic, WS tick routing, DB writes |
-| Use cases | JUnit + MockK | Data transformations, error wrapping |
+| ViewModel | JUnit + MockK + Turbine | State transitions, effect delivery, debounce, offline flag |
+| Repository | JUnit + MockK + Turbine | Sync logic, WS tick routing, atomic order placement |
+| Use cases | JUnit + MockK | Validation, P&L math, TP/SL monitoring, error wrapping |
 | HTTP parsing | MockWebServer + JUnit | Retrofit parameter encoding, Gson deserialization |
 | Mapper | JUnit | DTO → entity → domain field mapping |
 
@@ -187,27 +290,30 @@ coroutine test code synchronous and deterministic.
 `cancelAndConsumeRemainingEvents()` to assert Flow emissions without manual coroutine
 coordination or `delay()` calls.
 
+**Room transactions in unit tests:** `TradeRepositoryImpl.runInTransaction` is `open internal`
+so tests override it and run the block directly without `mockkStatic` on Room extensions.
+
 ---
 
 ## Build System
 
 ### Convention Plugins (`build-logic`)
 
-A Gradle composite build at `build-logic/` defines six convention plugins that eliminate
-~150 lines of duplicated Gradle config across 12 modules:
+A Gradle composite build at `build-logic/` defines six convention plugins:
 
 | Plugin ID | Applied by | Provides |
 |-----------|-----------|---------|
-| `tradingapp.kotlin.library` | `core-common`, `domain` | `kotlin.jvm` + toolchain 17 |
-| `tradingapp.android.library` | Android libraries | `android.library` + `kotlin.android` + SDK versions |
-| `tradingapp.android.library.compose` | Compose libraries | above + `kotlin.plugin.compose` + `buildFeatures.compose` |
-| `tradingapp.android.hilt` | Any module using Hilt | `hilt` + `ksp` + hilt-android + hilt-compiler deps |
-| `tradingapp.android.feature` | `feature-*` modules | compose + hilt + lifecycle + Compose BOM + test stack |
-| `tradingapp.android.application` | `app` | `android.application` + kotlin + compose + SDK |
+| `tradingapp.kotlin.library` | `core-common`, `domain` | `kotlin.jvm` + JVM toolchain 21 |
+| `tradingapp.android.library` | Android libraries | `android.library` + SDK versions |
+| `tradingapp.android.library.compose` | Compose libraries | above + Compose plugin + `buildFeatures.compose` |
+| `tradingapp.android.hilt` | Hilt modules | Hilt + KSP + compiler deps |
+| `tradingapp.android.feature` | `feature-*` modules | compose + hilt + lifecycle + test stack |
+| `tradingapp.android.application` | `app` | application + compose + SDK + profile-installer |
 
 The version catalog (`gradle/libs.versions.toml`) is shared between the main build and
 build-logic via `versionCatalogs { create("libs") { from(files("../gradle/libs.versions.toml")) } }`
-in `build-logic/settings.gradle.kts`.
+in `build-logic/settings.gradle.kts`. Module scripts use typed `libs.*` accessors; convention
+plugins read the catalog via `Project.catalog` to avoid shadowing Gradle's generated `libs`.
 
 ### Baseline Profiles (`:baseline-profile`)
 
@@ -222,16 +328,32 @@ profile-guided optimisation (PGO).
 
 ### Macrobenchmarks (`:macrobenchmark`)
 
-Two benchmarks run on a connected device/emulator (API 29+):
+Self-instrumenting macrobenchmark module targeting `:app`. Requires a physical device (API 29+).
 
 | Benchmark | Metric | Variants |
 |-----------|--------|---------|
-| `StartupBenchmark` | `StartupTimingMetric` | `None()` vs `Partial()` (profile) |
-| `WatchlistScrollBenchmark` | `FrameTimingMetric` | `None()` vs `Partial()` (profile) |
+| `StartupBenchmark` | `StartupTimingMetric` (TTID) | `None()` vs `Partial()` |
+| `WatchlistScrollBenchmark` | `FrameTimingMetric` | `None()` vs `Partial()` |
 
 ```bash
 ./gradlew :macrobenchmark:connectedBenchmarkAndroidTest
 ```
+
+**Device run setup:**
+
+- `app` defines a `benchmark` build type — `initWith(release)` + debug signing — so the APK installs on device.
+- `macrobenchmark` depends on `benchmark-junit4` (provides `AndroidBenchmarkRunner`) and `benchmark-macro-junit4`.
+
+**Measured results (OPPO CPH2689, Android 16, 2026-06-08):**
+
+| Test | JIT median TTID | Profile median TTID |
+|------|-----------------|---------------------|
+| `coldStartNoCompilation` | 315.7 ms | — |
+| `coldStartBaselineProfile` | — | 289.1 ms |
+
+Scroll benchmarks currently fail with `StaleObjectException` — UiAutomator holds a scrollable
+node while realtime price updates invalidate the accessibility tree. Re-query the list each
+scroll iteration to fix.
 
 ---
 
