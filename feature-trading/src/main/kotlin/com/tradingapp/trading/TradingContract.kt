@@ -12,7 +12,11 @@ data class TradingState(
     val existingPosition: Position? = null,
     val selectedSide: OrderSide = OrderSide.BUY,
     val quantityInput: String = "",
+    val takeProfitInput: String = "",
+    val stopLossInput: String = "",
     val validationError: ValidationError? = null,
+    val takeProfitError: ValidationError? = null,
+    val stopLossError: ValidationError? = null,
     val isReviewVisible: Boolean = false,
     val isPlacingOrder: Boolean = false,
     val isLoading: Boolean = true,
@@ -25,6 +29,8 @@ sealed interface TradingEvent {
     data class SideSelected(val side: OrderSide) : TradingEvent
     data class QuantityChanged(val quantity: String) : TradingEvent
     data class QuickFillSelected(val fraction: Double) : TradingEvent
+    data class TakeProfitChanged(val value: String) : TradingEvent
+    data class StopLossChanged(val value: String) : TradingEvent
     data object ReviewOrder : TradingEvent
     data object DismissReview : TradingEvent
     data object ConfirmOrder : TradingEvent

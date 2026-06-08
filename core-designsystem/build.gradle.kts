@@ -7,7 +7,7 @@ android {
 }
 
 dependencies {
-    implementation(platform(libs.findLibrary("compose-bom").get()))
-    implementation(libs.findLibrary("compose-ui-graphics").get())
-    implementation(libs.findLibrary("compose-material3").get())
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui.graphics)
+    implementation(libs.compose.material3)
 }

@@ -9,12 +9,12 @@ android {
 
 dependencies {
     implementation(project(":core-common"))
-    implementation(libs.findLibrary("room-runtime").get())
-    implementation(libs.findLibrary("room-ktx").get())
-    ksp(libs.findLibrary("room-compiler").get())
-    implementation(libs.findLibrary("coroutines-core").get())
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+    implementation(libs.coroutines.core)
 
-    testImplementation(libs.findLibrary("junit4").get())
-    testImplementation(libs.findLibrary("coroutines-test").get())
-    testImplementation(libs.findLibrary("turbine").get())
+    testImplementation(libs.junit4)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.turbine)
 }

@@ -3,5 +3,5 @@ plugins {
 }
 
 dependencies {
-    testImplementation(libs.findLibrary("junit4").get())
+    testImplementation(libs.junit4)
 }

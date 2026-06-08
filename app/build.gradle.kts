@@ -23,8 +23,8 @@ android {
 }
 
 dependencies {
-    androidTestImplementation(libs.findLibrary("hilt-android-testing").get())
-    kspAndroidTest(libs.findLibrary("hilt-compiler").get())
+    androidTestImplementation(libs.hilt.android.testing)
+    kspAndroidTest(libs.hilt.compiler)
 
     // Navigation graph — pulls in all feature modules transitively
     implementation(project(":core-navigation"))

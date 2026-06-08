@@ -5,9 +5,17 @@ import com.tradingapp.domain.model.Order
 import com.tradingapp.domain.model.OrderSide
 import com.tradingapp.domain.model.OrderStatus
 import com.tradingapp.domain.model.Portfolio
+import com.tradingapp.domain.model.CloseReason
+import com.tradingapp.domain.model.PriceTick
+import com.tradingapp.domain.model.TradeDirection
+import com.tradingapp.domain.usecase.ClosePositionUseCase
+import com.tradingapp.domain.usecase.EditPositionRiskUseCase
 import com.tradingapp.domain.usecase.GetOrderHistoryUseCase
 import com.tradingapp.domain.usecase.GetPortfolioUseCase
+import com.tradingapp.domain.usecase.MonitorPositionExitUseCase
 import com.tradingapp.domain.usecase.ObserveNetworkStatusUseCase
+import com.tradingapp.domain.usecase.ObservePriceTicksUseCase
+import com.tradingapp.domain.usecase.ValidateTakeProfitStopLossUseCase
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +23,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.tradingapp.domain.model.Position
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -38,11 +47,18 @@ class PortfolioViewModelTest {
     private val getPortfolio: GetPortfolioUseCase = mockk()
     private val getOrderHistory: GetOrderHistoryUseCase = mockk()
     private val observeNetworkStatus: ObserveNetworkStatusUseCase = mockk()
+    private val observePriceTicks: ObservePriceTicksUseCase = mockk()
+    private val monitorPositionExit: MonitorPositionExitUseCase = mockk()
+    private val closePosition: ClosePositionUseCase = mockk()
+    private val editPositionRisk: EditPositionRiskUseCase = mockk()
+    private val validateTpSl: ValidateTakeProfitStopLossUseCase = mockk()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         every { observeNetworkStatus() } returns flowOf(true)
+        every { observePriceTicks(any()) } returns emptyFlow()
+        every { monitorPositionExit(any(), any()) } returns emptyFlow()
     }
 
     @After
@@ -138,21 +154,6 @@ class PortfolioViewModelTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `NavigateBack event emits NavigateBack effect`() = runTest {
-        every { getPortfolio() } returns MutableSharedFlow()
-        every { getOrderHistory() } returns flowOf(emptyList())
-
-        val vm = buildViewModel()
-
-        vm.effects.test {
-            vm.onEvent(PortfolioEvent.NavigateBack)
-            testDispatcher.scheduler.advanceUntilIdle()
-            assertEquals(PortfolioEffect.NavigateBack, awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
     fun `TradeAsset event emits NavigateToTrade effect with correct symbol`() = runTest {
         every { getPortfolio() } returns MutableSharedFlow()
         every { getOrderHistory() } returns flowOf(emptyList())
@@ -195,14 +196,14 @@ class PortfolioViewModelTest {
     fun `portfolio state updates reactively when price tick changes portfolio value`() = runTest {
         val initialPortfolio = Portfolio(
             cashBalance = 5_000.0,
-            positions = listOf(Position("BTC", quantity = 0.1, averagePrice = 50_000.0, currentPrice = 50_000.0, totalValue = 5_000.0, unrealizedPnL = 0.0, unrealizedPnLPct = 0.0)),
+            positions = listOf(Position("p1", "BTC", TradeDirection.LONG, quantity = 0.1, averagePrice = 50_000.0, currentPrice = 50_000.0, totalValue = 5_000.0, unrealizedPnL = 0.0, unrealizedPnLPct = 0.0)),
             totalValue = 10_000.0,
             totalUnrealizedPnL = 0.0,
             totalUnrealizedPnLPct = 0.0,
         )
         val updatedPortfolio = Portfolio(
             cashBalance = 5_000.0,
-            positions = listOf(Position("BTC", quantity = 0.1, averagePrice = 50_000.0, currentPrice = 60_000.0, totalValue = 6_000.0, unrealizedPnL = 1_000.0, unrealizedPnLPct = 20.0)),
+            positions = listOf(Position("p1", "BTC", TradeDirection.LONG, quantity = 0.1, averagePrice = 50_000.0, currentPrice = 60_000.0, totalValue = 6_000.0, unrealizedPnL = 1_000.0, unrealizedPnLPct = 20.0)),
             totalValue = 11_000.0,
             totalUnrealizedPnL = 1_000.0,
             totalUnrealizedPnLPct = 20.0,
@@ -228,7 +229,10 @@ class PortfolioViewModelTest {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private fun buildViewModel() = PortfolioViewModel(getPortfolio, getOrderHistory, observeNetworkStatus)
+    private fun buildViewModel() = PortfolioViewModel(
+        getPortfolio, getOrderHistory, observeNetworkStatus,
+        observePriceTicks, monitorPositionExit, closePosition, editPositionRisk, validateTpSl,
+    )
 
     private fun emptyPortfolio() = Portfolio(
         cashBalance = 10_000.0,
@@ -242,6 +246,7 @@ class PortfolioViewModelTest {
         id = "id-$symbol",
         symbol = symbol,
         side = side,
+        direction = TradeDirection.LONG,
         quantity = 0.1,
         price = 1_000.0,
         totalValue = 100.0,

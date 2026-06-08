@@ -65,7 +65,7 @@ class TradeRepositoryImplTest {
         val positionSlot = slot<PositionEntity>()
         coEvery { positionDao.upsert(capture(positionSlot)) } returns Unit
 
-        repo.placeOrder(buyOrder(qty = 0.5, price = 60_000.0))
+        repo.placeOrder(buyOrder(qty = 0.5, price = 60_000.0), null, null)
 
         with(positionSlot.captured) {
             assertEquals("BTC", symbol)
@@ -78,13 +78,13 @@ class TradeRepositoryImplTest {
     fun `placeOrder BUY with existing position calculates weighted average price`() = runTest {
         coEvery { walletDao.get() } returns WalletEntity(cashBalance = 10_000.0)
         // Existing: 1.0 BTC @ 50_000
-        coEvery { positionDao.getBySymbol("BTC") } returns PositionEntity("BTC", 1.0, 50_000.0, 0L)
+        coEvery { positionDao.getBySymbol("BTC") } returns PositionEntity("BTC", 1.0, 50_000.0, 0L, "pos-1", "LONG", null, null, 0L)
 
         val positionSlot = slot<PositionEntity>()
         coEvery { positionDao.upsert(capture(positionSlot)) } returns Unit
 
         // Buy 1.0 more BTC @ 60_000 → avg = (1×50_000 + 1×60_000) / 2 = 55_000
-        repo.placeOrder(buyOrder(qty = 1.0, price = 60_000.0))
+        repo.placeOrder(buyOrder(qty = 1.0, price = 60_000.0), null, null)
 
         assertEquals(2.0, positionSlot.captured.quantity, 0.001)
         assertEquals(55_000.0, positionSlot.captured.avgPrice, 0.001)
@@ -99,7 +99,7 @@ class TradeRepositoryImplTest {
         coEvery { walletDao.upsert(capture(walletSlot)) } returns Unit
 
         // Buy 0.1 BTC @ 60_000 → debit 6_000 → new balance 4_000
-        repo.placeOrder(buyOrder(qty = 0.1, price = 60_000.0))
+        repo.placeOrder(buyOrder(qty = 0.1, price = 60_000.0), null, null)
 
         assertEquals(4_000.0, walletSlot.captured.cashBalance, 0.001)
     }
@@ -112,7 +112,7 @@ class TradeRepositoryImplTest {
         val walletSlot = slot<WalletEntity>()
         coEvery { walletDao.upsert(capture(walletSlot)) } returns Unit
 
-        repo.placeOrder(buyOrder(qty = 0.1, price = 1_000.0))
+        repo.placeOrder(buyOrder(qty = 0.1, price = 1_000.0), null, null)
 
         // INITIAL_BALANCE (10_000) − 0.1 × 1_000 = 9_900
         assertEquals(9_900.0, walletSlot.captured.cashBalance, 0.001)
@@ -125,12 +125,12 @@ class TradeRepositoryImplTest {
     @Test
     fun `placeOrder SELL partial reduces position quantity and preserves average price`() = runTest {
         coEvery { walletDao.get() } returns WalletEntity(cashBalance = 1_000.0)
-        coEvery { positionDao.getBySymbol("BTC") } returns PositionEntity("BTC", 2.0, 50_000.0, 0L)
+        coEvery { positionDao.getBySymbol("BTC") } returns PositionEntity("BTC", 2.0, 50_000.0, 0L, "pos-2", "LONG", null, null, 0L)
 
         val positionSlot = slot<PositionEntity>()
         coEvery { positionDao.upsert(capture(positionSlot)) } returns Unit
 
-        repo.placeOrder(sellOrder(qty = 0.5, price = 60_000.0))
+        repo.placeOrder(sellOrder(qty = 0.5, price = 60_000.0), null, null)
 
         assertEquals(1.5, positionSlot.captured.quantity, 0.001)
         assertEquals(50_000.0, positionSlot.captured.avgPrice, 0.001) // avg price unchanged on SELL
@@ -139,9 +139,9 @@ class TradeRepositoryImplTest {
     @Test
     fun `placeOrder SELL all quantity deletes position`() = runTest {
         coEvery { walletDao.get() } returns WalletEntity(cashBalance = 1_000.0)
-        coEvery { positionDao.getBySymbol("BTC") } returns PositionEntity("BTC", 1.0, 50_000.0, 0L)
+        coEvery { positionDao.getBySymbol("BTC") } returns PositionEntity("BTC", 1.0, 50_000.0, 0L, "pos-1", "LONG", null, null, 0L)
 
-        repo.placeOrder(sellOrder(qty = 1.0, price = 60_000.0))
+        repo.placeOrder(sellOrder(qty = 1.0, price = 60_000.0), null, null)
 
         coVerify { positionDao.deleteBySymbol("BTC") }
         coVerify(exactly = 0) { positionDao.upsert(any()) }
@@ -150,13 +150,13 @@ class TradeRepositoryImplTest {
     @Test
     fun `placeOrder SELL credits wallet by totalValue`() = runTest {
         coEvery { walletDao.get() } returns WalletEntity(cashBalance = 1_000.0)
-        coEvery { positionDao.getBySymbol("BTC") } returns PositionEntity("BTC", 1.0, 50_000.0, 0L)
+        coEvery { positionDao.getBySymbol("BTC") } returns PositionEntity("BTC", 1.0, 50_000.0, 0L, "pos-1", "LONG", null, null, 0L)
 
         val walletSlot = slot<WalletEntity>()
         coEvery { walletDao.upsert(capture(walletSlot)) } returns Unit
 
         // Sell 0.5 BTC @ 60_000 → credit 30_000 → new balance 31_000
-        repo.placeOrder(sellOrder(qty = 0.5, price = 60_000.0))
+        repo.placeOrder(sellOrder(qty = 0.5, price = 60_000.0), null, null)
 
         assertEquals(31_000.0, walletSlot.captured.cashBalance, 0.001)
     }
@@ -171,7 +171,7 @@ class TradeRepositoryImplTest {
         coEvery { positionDao.getBySymbol("BTC") } returns null
 
         val order = buyOrder(qty = 0.1, price = 60_000.0)
-        val result = repo.placeOrder(order)
+        val result = repo.placeOrder(order, null, null)
 
         assertTrue(result.isSuccess)
         assertEquals(order, result.getOrThrow())
@@ -184,7 +184,7 @@ class TradeRepositoryImplTest {
         coEvery { positionDao.getBySymbol("BTC") } returns null
         coEvery { orderDao.insert(any()) } throws RuntimeException("DB write failed")
 
-        val result = repo.placeOrder(buyOrder())
+        val result = repo.placeOrder(buyOrder(), null, null)
 
         assertTrue(result.isFailure)
         assertEquals("DB write failed", result.exceptionOrNull()?.message)
@@ -219,7 +219,7 @@ class TradeRepositoryImplTest {
     @Test
     fun `observePositions maps PositionEntity to domain Position`() = runTest {
         every { positionDao.observeAll() } returns flowOf(
-            listOf(PositionEntity("ETH", 2.5, 3_000.0, 0L)),
+            listOf(PositionEntity("ETH", 2.5, 3_000.0, 0L, "pos-eth", "LONG", null, null, 0L)),
         )
 
         val positions = repo.observePositions().first()
@@ -240,6 +240,7 @@ class TradeRepositoryImplTest {
         id = "test-id",
         symbol = "BTC",
         side = OrderSide.BUY,
+        direction = com.tradingapp.domain.model.TradeDirection.LONG,
         quantity = qty,
         price = price,
         totalValue = qty * price,
@@ -251,6 +252,7 @@ class TradeRepositoryImplTest {
         id = "test-sell",
         symbol = "BTC",
         side = OrderSide.SELL,
+        direction = com.tradingapp.domain.model.TradeDirection.SHORT,
         quantity = qty,
         price = price,
         totalValue = qty * price,

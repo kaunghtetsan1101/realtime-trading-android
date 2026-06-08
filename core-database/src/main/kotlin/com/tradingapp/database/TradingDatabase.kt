@@ -15,7 +15,7 @@ import com.tradingapp.database.entity.WalletEntity
 
 @Database(
     entities = [AssetEntity::class, OrderEntity::class, PositionEntity::class, WalletEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class TradingDatabase : RoomDatabase() {
@@ -69,6 +69,22 @@ abstract class TradingDatabase : RoomDatabase() {
                         """.trimIndent(),
                     )
                     db.execSQL("INSERT INTO wallet (id, cash_balance) VALUES (1, 10000.0)")
+                }
+            }
+
+        val MIGRATION_3_4 =
+            object : Migration(3, 4) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE positions ADD COLUMN id TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE positions ADD COLUMN direction TEXT NOT NULL DEFAULT 'LONG'")
+                    db.execSQL("ALTER TABLE positions ADD COLUMN take_profit REAL")
+                    db.execSQL("ALTER TABLE positions ADD COLUMN stop_loss REAL")
+                    db.execSQL("ALTER TABLE positions ADD COLUMN opened_at INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE orders ADD COLUMN direction TEXT NOT NULL DEFAULT 'LONG'")
+                    db.execSQL("ALTER TABLE orders ADD COLUMN close_price REAL")
+                    db.execSQL("ALTER TABLE orders ADD COLUMN closed_at INTEGER")
+                    db.execSQL("ALTER TABLE orders ADD COLUMN close_reason TEXT")
+                    db.execSQL("ALTER TABLE orders ADD COLUMN realized_pnl REAL")
                 }
             }
     }

@@ -25,7 +25,7 @@ object DatabaseModule {
             TradingDatabase::class.java,
             "trading.db",
         )
-        .addMigrations(TradingDatabase.MIGRATION_1_2, TradingDatabase.MIGRATION_2_3)
+        .addMigrations(TradingDatabase.MIGRATION_1_2, TradingDatabase.MIGRATION_2_3, TradingDatabase.MIGRATION_3_4)
         .build()
 
     @Provides

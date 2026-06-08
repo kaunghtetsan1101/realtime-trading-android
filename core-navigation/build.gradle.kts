@@ -15,17 +15,19 @@ dependencies {
     implementation(project(":feature-trading"))
     implementation(project(":feature-settings"))
 
-    implementation(libs.findLibrary("androidx-lifecycle-runtime-ktx").get())
+    implementation(libs.androidx.lifecycle.runtime.ktx)
 
-    implementation(platform(libs.findLibrary("compose-bom").get()))
-    implementation(libs.findLibrary("compose-ui").get())
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons.extended)
 
-    implementation(libs.findLibrary("navigation3-runtime").get())
-    implementation(libs.findLibrary("navigation3-ui").get())
-    implementation(libs.findLibrary("lifecycle-viewmodel-nav3").get())
-    implementation(libs.findLibrary("hilt-lifecycle-viewmodel-compose").get())
+    implementation(libs.navigation3.runtime)
+    implementation(libs.navigation3.ui)
+    implementation(libs.lifecycle.viewmodel.nav3)
+    implementation(libs.hilt.lifecycle.viewmodel.compose)
 
-    implementation(libs.findLibrary("kotlinx-serialization-core").get())
+    implementation(libs.kotlinx.serialization.core)
 
-    debugImplementation(libs.findLibrary("compose-ui-tooling").get())
+    debugImplementation(libs.compose.ui.tooling)
 }

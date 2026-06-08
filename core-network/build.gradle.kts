@@ -9,16 +9,16 @@ android {
 
 dependencies {
     implementation(project(":core-common"))
-    implementation(libs.findLibrary("retrofit").get())
-    implementation(libs.findLibrary("retrofit-gson").get())
-    implementation(libs.findLibrary("okhttp").get())
-    implementation(libs.findLibrary("okhttp-logging").get())
-    implementation(libs.findLibrary("coroutines-core").get())
-    implementation(libs.findLibrary("timber").get())
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
+    implementation(libs.coroutines.core)
+    implementation(libs.timber)
 
-    testImplementation(libs.findLibrary("junit4").get())
-    testImplementation(libs.findLibrary("mockk").get())
-    testImplementation(libs.findLibrary("coroutines-test").get())
-    testImplementation(libs.findLibrary("turbine").get())
-    testImplementation(libs.findLibrary("okhttp-mockwebserver").get())
+    testImplementation(libs.junit4)
+    testImplementation(libs.mockk)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation(libs.okhttp.mockwebserver)
 }

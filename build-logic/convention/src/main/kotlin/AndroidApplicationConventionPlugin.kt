@@ -12,9 +12,9 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
             pluginManager.apply("com.android.application")
             pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
             extensions.configure<ApplicationExtension> {
-                compileSdk = libs.findVersion("compileSdk").get().requiredVersion.toInt()
-                defaultConfig.minSdk = libs.findVersion("minSdk").get().requiredVersion.toInt()
-                defaultConfig.targetSdk = libs.findVersion("targetSdk").get().requiredVersion.toInt()
+                compileSdk = catalog.findVersion("compileSdk").get().requiredVersion.toInt()
+                defaultConfig.minSdk = catalog.findVersion("minSdk").get().requiredVersion.toInt()
+                defaultConfig.targetSdk = catalog.findVersion("targetSdk").get().requiredVersion.toInt()
                 buildFeatures.compose = true
                 buildFeatures.buildConfig = true
             }
@@ -22,25 +22,25 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                 jvmToolchain(21)
             }
             dependencies {
-                "implementation"(libs.findLibrary("androidx-core-ktx").get())
-                "implementation"(libs.findLibrary("androidx-lifecycle-runtime-ktx").get())
-                "implementation"(libs.findLibrary("androidx-activity-compose").get())
-                "implementation"(platform(libs.findLibrary("compose-bom").get()))
-                "implementation"(libs.findLibrary("compose-ui").get())
-                "implementation"(libs.findLibrary("compose-ui-graphics").get())
-                "implementation"(libs.findLibrary("compose-ui-tooling-preview").get())
-                "implementation"(libs.findLibrary("compose-material3").get())
+                "implementation"(catalog.findLibrary("androidx-core-ktx").get())
+                "implementation"(catalog.findLibrary("androidx-lifecycle-runtime-ktx").get())
+                "implementation"(catalog.findLibrary("androidx-activity-compose").get())
+                "implementation"(platform(catalog.findLibrary("compose-bom").get()))
+                "implementation"(catalog.findLibrary("compose-ui").get())
+                "implementation"(catalog.findLibrary("compose-ui-graphics").get())
+                "implementation"(catalog.findLibrary("compose-ui-tooling-preview").get())
+                "implementation"(catalog.findLibrary("compose-material3").get())
                 // Baseline Profile: pre-compiles hot paths at install time
-                "implementation"(libs.findLibrary("profile-installer").get())
-                "implementation"(libs.findLibrary("timber").get())
-                "debugImplementation"(libs.findLibrary("leak-canary").get())
-                "debugImplementation"(libs.findLibrary("compose-ui-tooling").get())
-                "debugImplementation"(libs.findLibrary("compose-ui-test-manifest").get())
-                "androidTestImplementation"(platform(libs.findLibrary("compose-bom").get()))
-                "androidTestImplementation"(libs.findLibrary("compose-ui-test-junit4").get())
-                "androidTestImplementation"(libs.findLibrary("junit-ext").get())
-                "androidTestImplementation"(libs.findLibrary("espresso-core").get())
-                "testImplementation"(libs.findLibrary("junit4").get())
+                "implementation"(catalog.findLibrary("profile-installer").get())
+                "implementation"(catalog.findLibrary("timber").get())
+                "debugImplementation"(catalog.findLibrary("leak-canary").get())
+                "debugImplementation"(catalog.findLibrary("compose-ui-tooling").get())
+                "debugImplementation"(catalog.findLibrary("compose-ui-test-manifest").get())
+                "androidTestImplementation"(platform(catalog.findLibrary("compose-bom").get()))
+                "androidTestImplementation"(catalog.findLibrary("compose-ui-test-junit4").get())
+                "androidTestImplementation"(catalog.findLibrary("junit-ext").get())
+                "androidTestImplementation"(catalog.findLibrary("espresso-core").get())
+                "testImplementation"(catalog.findLibrary("junit4").get())
             }
         }
     }

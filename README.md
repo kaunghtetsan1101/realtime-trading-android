@@ -19,6 +19,7 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 | M8 ──► Search | ✅ Done |
 | M9 ──► Trading Screen + Portfolio | ✅ Done |
 | M10 ──► Settings + Polish | ✅ Done |
+| M11 ──► Advanced Position Management | ✅ Done |
 
 ## Tech Stack
 
@@ -27,6 +28,7 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 | Language | Kotlin |
 | Preferences | DataStore Preferences |
 | UI | Jetpack Compose + Material3 |
+| Navigation | Navigation 3 (`androidx.navigation3`) + bottom tab bar (Market / Portfolio) |
 | Architecture | MVI + Clean Architecture |
 | DI | Hilt |
 | Async | Coroutines + Flow / StateFlow |
@@ -35,7 +37,7 @@ Built with Kotlin, Jetpack Compose, MVI, Clean Architecture, and Hilt.
 | Logging | Timber |
 | Static analysis | detekt |
 | Formatting | Spotless + ktlint |
-| Build | Gradle 9.4.1 + AGP 9.2.1 + Convention Plugins + Version Catalog |
+| Build | Gradle 9.5.0 + AGP 9.2.1 + Convention Plugins + Version Catalog |
 | Testing | JUnit + MockK + Turbine + MockWebServer |
 | Debug | LeakCanary |
 | CI | GitHub Actions |
@@ -48,7 +50,7 @@ realtime-trading-android/
 ├── build-logic/            # Gradle convention plugins — eliminates duplicated build config
 │
 ├── app/                    # Entry point: TradingApp (@HiltAndroidApp), MainActivity, DI bootstrap
-├── core-navigation/        # AppNavGraph, Routes, NavigationViewModel — wires all feature screens
+├── core-navigation/        # Navigation 3 graph, Routes, bottom nav shell, NavigationViewModel back stack
 │
 ├── core-common/            # Result<T>, DispatcherProvider, NetworkStatus, Flow extensions
 ├── core-ui/                # Shared Composables, Material3 theme, OfflineBanner
@@ -124,7 +126,7 @@ graph TD
     end
 
     subgraph nav["core-navigation"]
-        NAV["AppNavGraph · Routes"]
+        NAV["AppNavGraph · Routes · Bottom nav · NavigationViewModel"]
     end
 
     subgraph features["Feature Modules"]
@@ -225,8 +227,10 @@ The design system is split across two modules:
 | `EmptyState` | Customisable icon + title + subtitle for no-results states |
 | `OfflineBanner` | Animated slide-in banner showing cache age when offline |
 
-**Dark mode** follows system preference via `isSystemInDarkTheme()` with no runtime toggle required.
-Every component has paired `@Preview` annotations for both light and dark to catch visual regressions in Android Studio.
+**Dark mode** defaults to system preference and can be overridden in **Settings → Appearance**
+(System / Light / Dark). The choice is persisted in DataStore and applied in `MainActivity`
+via `collectAsStateWithLifecycle`. Every component has paired `@Preview` annotations for both
+light and dark to catch visual regressions in Android Studio.
 
 **Accessibility highlights:**
 - Icon-only buttons (`Favorite`, back, clear) carry explicit `contentDescription` values
@@ -241,7 +245,10 @@ Every component has paired `@Preview` annotations for both light and dark to cat
 | Screen | Description |
 |--------|-------------|
 | `TradingScreen` | BUY/SELL toggle, quantity input, quick-fill buttons (25 / 50 / 75 / MAX), live price display, order summary card, confirmation `ModalBottomSheet` |
-| `PortfolioScreen` | Total portfolio value card, cash balance, open positions with live unrealised P&L, order history list, per-position "Trade" shortcut |
+| `PortfolioScreen` | Total portfolio value card, cash balance, open positions with live unrealised P&L, TP/SL auto-exit monitoring, order history list, per-position "Trade" / "Edit" actions |
+
+Portfolio is reachable from the bottom **NavigationBar** (Market / Portfolio tabs) in `AppNavGraph`,
+not from the Watchlist top bar.
 
 ### Domain models added
 
@@ -358,6 +365,156 @@ All ViewModels (`Watchlist`, `MarketDetail`, `Search`, `Trading`, `Portfolio`) r
 - `ErrorMapperTest` (6 cases) — mapping for all exception types including edge cases
 - `SettingsViewModelTest` (7 cases) — theme/logging state, reactive updates, NavigateBack effect
 
+## Advanced Position Management (M11)
+
+### Overview
+
+M11 adds realistic risk-management simulation to the trading feature — Take Profit, Stop Loss,
+automatic position exit when price crosses a threshold, and a post-open Edit Position dialog.
+All behaviour is client-side simulation; no real broker API is involved.
+
+### New domain enums
+
+| Enum | Values | Purpose |
+|------|--------|---------|
+| `TradeDirection` | `LONG`, `SHORT` | Direction of an open position (derived from `OrderSide` at order placement) |
+| `CloseReason` | `TAKE_PROFIT_TRIGGERED`, `STOP_LOSS_TRIGGERED`, `MANUAL_CLOSE` | Why a position was closed; stored on the closing `Order` record |
+
+### Domain model changes
+
+| Model | Added fields |
+|-------|-------------|
+| `Position` | `id: String`, `direction: TradeDirection`, `takeProfit: Double?`, `stopLoss: Double?`, `openedAt: Long` |
+| `Order` | `direction: TradeDirection`, `closePrice: Double?`, `closedAt: Long?`, `closeReason: CloseReason?`, `realizedPnL: Double?` |
+| `ValidationResult` | 7 new error variants for TP/SL directional validation |
+
+### New use cases
+
+| Use Case | Behaviour |
+|----------|-----------|
+| `ValidateTakeProfitStopLossUseCase` | Pure, synchronous; enforces LONG: TP > entry > SL, SHORT: TP < entry < SL; accepts blank strings (optional fields) |
+| `CalculateRealizedPnLUseCase` | `LONG: (closePrice − entry) × qty` · `SHORT: (entry − closePrice) × qty` |
+| `MonitorPositionExitUseCase` | Converts a price `Flow<Double>` into `Flow<CloseReason>` — emits once when price crosses TP or SL |
+| `EditPositionRiskUseCase` | Validates updated TP/SL values then persists via `TradeRepository.updatePositionRisk` |
+| `ClosePositionUseCase` | Delegates manual-close to `TradeRepository.closePosition` |
+
+### TP/SL on order entry
+
+`RiskManagementSection` on `TradingScreen` exposes two optional `OutlinedTextField` fields.
+Dynamic placeholder hints adapt to `TradeDirection`:
+
+- **LONG BUY**: TP placeholder `> $entry` · SL placeholder `< $entry`
+- **SHORT SELL**: TP placeholder `< $entry` · SL placeholder `> $entry`
+
+Validation runs on every keystroke and routes errors to the field that owns the violation.
+Switching BUY/SELL resets all TP/SL inputs.
+
+### Edit Position dialog
+
+Tapping **Edit** on a position card opens an `AlertDialog` pre-populated with the current TP/SL
+values. Users may clear, update, or add levels after a position is open. Saving re-runs the same
+`ValidateTakeProfitStopLossUseCase` before persisting.
+
+### Automatic position exit monitoring
+
+`PortfolioViewModel` starts `monitorExits()` in `init {}`, which:
+
+```
+getPortfolio()                                     // reactive positions list
+  .map { it.positions }
+  .flatMapLatest { positions ->                    // cancels old monitors when list changes
+      if (positions.isEmpty()) emptyFlow()
+      else merge(*positions.map { position ->      // one monitor per open position, concurrent
+          val priceFlow = observePriceTicks(position.symbol).map { it.price }
+          monitorPositionExit(position, priceFlow)
+              .take(1)                             // auto-cancels monitor after first trigger
+              .map { reason -> Triple(position.id, position.symbol, reason) }
+      }.toTypedArray())
+  }
+  .onEach { (positionId, symbol, reason) ->
+      closePosition(positionId, currentPrice, reason)   // atomic: PnL calc + wallet credit + DB delete
+      sendEffect(ShowSnackbar("$symbol closed — $reasonLabel hit. PnL: …"))
+  }
+```
+
+**Why this pattern?**  
+`flatMapLatest` ensures that when positions open or close the entire monitoring graph is rebuilt —
+no stale subscribers. `take(1)` prevents a position from triggering twice if price oscillates
+around the threshold. Monitoring runs in `viewModelScope` so it is automatically cancelled when
+the Portfolio screen leaves the back stack.
+
+### Order history — close reason display
+
+Closed positions produce an `Order` record with a `CLOSED` tag, close reason label
+(`Take Profit` / `Stop Loss` / `Manual Close`), realized P&L, and close timestamp.
+`OrderHistoryRow` renders these fields with `PriceUp` / `PriceDown` colour coding.
+
+### Database migration 3 → 4
+
+Migration is additive-only (no existing rows are affected):
+
+```sql
+-- positions
+ALTER TABLE positions ADD COLUMN id           TEXT NOT NULL DEFAULT ''
+ALTER TABLE positions ADD COLUMN direction    TEXT NOT NULL DEFAULT 'LONG'
+ALTER TABLE positions ADD COLUMN take_profit  REAL
+ALTER TABLE positions ADD COLUMN stop_loss    REAL
+ALTER TABLE positions ADD COLUMN opened_at    INTEGER NOT NULL DEFAULT 0
+
+-- orders
+ALTER TABLE orders ADD COLUMN direction    TEXT NOT NULL DEFAULT 'LONG'
+ALTER TABLE orders ADD COLUMN close_price  REAL
+ALTER TABLE orders ADD COLUMN closed_at    INTEGER
+ALTER TABLE orders ADD COLUMN close_reason TEXT
+ALTER TABLE orders ADD COLUMN realized_pnl REAL
+```
+
+### Test coverage added (M11)
+
+| Test class | Module | Cases | What is tested |
+|---|---|---|---|
+| `ValidateTakeProfitStopLossUseCaseTest` | `domain` | 18 | All directional error paths, blanks accepted, TP == SL guard |
+| `CalculateRealizedPnLUseCaseTest` | `domain` | 8 | LONG/SHORT PnL math, edge cases (zero qty, break-even) |
+| `MonitorPositionExitUseCaseTest` | `domain` | 9 | Turbine: TP trigger, SL trigger, no-trigger, null TP/SL, price oscillation |
+
+Six existing test files were updated to match the expanded `Position`, `Order`, `PlaceOrderUseCase`,
+and `PortfolioViewModel` signatures (new `direction` field, 3-arg `placeOrder`, 8-arg VM constructor).
+
+**Running total: ~79 cases across 9 test files (44 from M1–M10 + 35 from M11).**
+
+## Navigation Shell
+
+`core-navigation` hosts the app-level navigation shell:
+
+| Piece | Role |
+|-------|------|
+| `NavigationViewModel` | Retains the Navigation 3 back stack across configuration changes |
+| `Route*` serializable keys | Typed destinations (`RouteWatchlist`, `RoutePortfolio`, `RouteMarketDetail`, …) |
+| `AppNavGraph` | `NavDisplay` + `entryProvider` wiring all feature screens |
+| Bottom `NavigationBar` | **Market** (watchlist root) and **Portfolio** tabs — visible only on those two routes |
+
+Detail flows (asset detail, search, trading, settings) hide the bottom bar and use each screen's
+own `TopAppBar` back affordance.
+
+With `enableEdgeToEdge()` in `MainActivity`, the outer `Scaffold` in `AppNavGraph` uses
+`contentWindowInsets = WindowInsets(0)` so status-bar insets are not applied twice (outer shell +
+inner feature `Scaffold`). Only bottom-bar padding is forwarded to `NavDisplay`.
+
+## Version Catalog & Build Logic
+
+Dependencies are centralised in `gradle/libs.versions.toml`.
+
+| Context | Access pattern |
+|---------|----------------|
+| Module `build.gradle.kts` | Type-safe accessors — e.g. `libs.room.runtime`, `libs.compose.bom`, `libs.plugins.hilt` |
+| Convention plugin Kotlin code | Runtime catalog via `catalog.findLibrary("room-runtime")` |
+
+`build-logic` exposes `Project.catalog` (not `Project.libs`) so convention plugins can read the
+catalog without shadowing Gradle's generated typed `libs` extension in module build scripts.
+
+Duplicate version aliases were consolidated (`lifecycle`, `androidxMacroBenchmark`) and benchmark
+library aliases were normalised (`androidx-benchmark-macro-junit4`).
+
 ## Performance
 
 ### Baseline Profiles
@@ -393,7 +550,7 @@ Two macrobenchmarks compare `CompilationMode.None()` (JIT only) vs `CompilationM
 ### Prerequisites
 - Android Studio Meerkat (2025.1) or newer
 - JDK 21
-- Android SDK 36
+- Android SDK 37 (compileSdk); targetSdk 36
 
 ### Clone and open
 ```bash
@@ -540,6 +697,9 @@ significantly faster than cold builds.
 | WS stream limit | Top 50 of 100 tracked assets | Binance combined-stream cap; ranks 51-100 show last-synced price |
 | Dynamic WS reconnect | `MutableStateFlow<String?> + flatMapLatest` | URL changes after sync automatically cancel old WS and open new one |
 | Navigation extraction | `core-navigation` module | Feature modules have zero knowledge of routes; `app` only depends on `core-navigation` |
+| Bottom tab navigation | `NavigationBar` in `AppNavGraph` | Market + Portfolio are peer roots; detail screens push onto the back stack without the tab bar |
+| Edge-to-edge insets | Outer scaffold `WindowInsets(0)` | Prevents double status-bar padding when feature screens own their own `TopAppBar` scaffold |
+| Version catalog accessors | Typed `libs.*` in modules; `catalog.*` in build-logic | `Project.catalog` extension avoids shadowing Gradle's generated `libs` type-safe API |
 | Convention plugins | `build-logic` composite build | ~150 lines of duplicated Gradle config replaced with 6 composable plugins; same approach as Now in Android |
 | JVM toolchain | 21 (via `gradle-daemon-jvm.properties`) | Replaces the foojay settings plugin; toolchain URLs resolved once at daemon start rather than on every project sync |
 | Kotlin 2.4 / Hilt metadata fix | `resolutionStrategy.force("kotlin-metadata-jvm:2.4.0")` | Hilt 2.59 bundles `kotlin-metadata-jvm` capped at 2.3.0; forcing 2.4.0 in root `allprojects` resolves the version conflict without waiting for a Hilt release |
@@ -563,6 +723,10 @@ significantly faster than cold builds.
 | `ErrorMapper` in `core-common` | Maps `IOException` hierarchy | Pure JVM — no Retrofit dependency in core-common; HttpException handling stays in data layer |
 | `AppInfo` provided by `app` module | `@Provides @Singleton` in `AppInfoModule` | Only the `app` module knows `BuildConfig.VERSION_NAME`; injected into `SettingsViewModel` via Hilt |
 | PortfolioViewModel retry | `Job` per flow + `.catch {}` | Room flows don't normally throw, but `.catch` is the safety net; Job tracking prevents duplicate observers on retry |
+| TP/SL on Position, not Order | `PositionEntity.take_profit / stop_loss` | TP/SL describe the open risk on a live position, not the fill record. Closing creates a new `Order` with `closeReason` + `realizedPnL`. |
+| Position exit monitoring | `flatMapLatest` + `merge` + `take(1)` in `PortfolioViewModel` | Rebuilds the full monitor graph when positions change; `take(1)` prevents double-trigger; cancels with `viewModelScope` — no background service needed for a sim |
+| Direction-aware PnL | LONG `(live − avg) × qty`, SHORT `(avg − live) × qty` | Applied in both `GetPortfolioUseCase` (unrealised) and `closePosition` (realised) so SHORT positions profit correctly when price falls |
+| MIGRATION_3_4 additive only | `ALTER TABLE … ADD COLUMN … DEFAULT …` | Five new nullable / defaulted columns added to `positions` and `orders` with no destructive change; existing rows get safe defaults |
 
 ## Known Limitations
 
@@ -576,7 +740,7 @@ significantly faster than cold builds.
 | No price alerts | Push notifications for price thresholds are not implemented. |
 | No charting | Price history is limited to the last 50 ticks shown as a simple line in the Detail screen. Full candlestick charting is a Phase 2 enhancement. |
 | Verbose logging default | Fresh installs start with verbose logging enabled. Users can disable it in Settings → Developer Options. |
-| Destructive Room migration | `TradingDatabase` uses `fallbackToDestructiveMigration()`. Any schema change wipes local data on the next app launch. Acceptable for a portfolio demo; a production app would supply explicit migration objects. |
+| Room migration coverage | `MIGRATION_3_4` (M11) is explicit and additive — no data loss. The 2→3 schema (M9) predates explicit migration support in this project and relies on `fallbackToDestructiveMigration()` as a safety net. Fresh installs are unaffected; upgrading from pre-M9 builds wipes local data. |
 
 ## Interview Notes
 
@@ -586,8 +750,10 @@ Key design decisions, architecture tradeoffs, and common interview questions wit
 
 - Replace simulated orders with a paper-trading sandbox API
 - Candlestick chart with multiple time-frame support
-- Push notifications for price thresholds
+- Push notifications for price thresholds (background `WorkManager` job checking TP/SL)
 - Portfolio performance over time (historical P&L chart)
+- Trailing stop-loss (dynamic SL that moves with price in favour)
+- Partial position close (close a fraction of an open position)
 - Biometric lock for the trading screen
 - Widget for home-screen price tiles
 - Full Compose UI test suite (instrumented)

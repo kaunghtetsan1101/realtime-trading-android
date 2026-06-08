@@ -28,7 +28,7 @@ class PlaceOrderUseCaseTest {
     @Test
     fun `invoke creates correct Order and delegates to repository`() = runTest {
         val orderSlot = slot<Order>()
-        coEvery { tradeRepository.placeOrder(capture(orderSlot)) } answers {
+        coEvery { tradeRepository.placeOrder(capture(orderSlot), any(), any()) } answers {
             Result.success(orderSlot.captured)
         }
 
@@ -43,18 +43,19 @@ class PlaceOrderUseCaseTest {
         with(orderSlot.captured) {
             assertEquals("BTC", symbol)
             assertEquals(OrderSide.BUY, side)
+            assertEquals(com.tradingapp.domain.model.TradeDirection.LONG, direction)
             assertEquals(0.5, quantity, 0.0)
             assertEquals(60_000.0, price, 0.0)
             assertEquals(30_000.0, totalValue, 0.0)
             assertEquals(OrderStatus.FILLED, status)
         }
-        coVerify(exactly = 1) { tradeRepository.placeOrder(any()) }
+        coVerify(exactly = 1) { tradeRepository.placeOrder(any(), isNull(), isNull()) }
     }
 
     @Test
     fun `invoke propagates repository failure`() = runTest {
         val error = RuntimeException("DB error")
-        coEvery { tradeRepository.placeOrder(any()) } returns Result.failure(error)
+        coEvery { tradeRepository.placeOrder(any(), any(), any()) } returns Result.failure(error)
 
         val result = useCase(OrderSide.BUY, "BTC", 1.0, 60_000.0)
 
@@ -65,7 +66,7 @@ class PlaceOrderUseCaseTest {
     @Test
     fun `invoke generates unique IDs for successive orders`() = runTest {
         val ids = mutableListOf<String>()
-        coEvery { tradeRepository.placeOrder(any()) } answers {
+        coEvery { tradeRepository.placeOrder(any(), any(), any()) } answers {
             val order = firstArg<Order>()
             ids.add(order.id)
             Result.success(order)
@@ -81,7 +82,7 @@ class PlaceOrderUseCaseTest {
     @Test
     fun `invoke SELL order sets correct side and totalValue`() = runTest {
         val orderSlot = slot<Order>()
-        coEvery { tradeRepository.placeOrder(capture(orderSlot)) } answers {
+        coEvery { tradeRepository.placeOrder(capture(orderSlot), any(), any()) } answers {
             Result.success(orderSlot.captured)
         }
 
@@ -89,6 +90,7 @@ class PlaceOrderUseCaseTest {
 
         with(orderSlot.captured) {
             assertEquals(OrderSide.SELL, side)
+            assertEquals(com.tradingapp.domain.model.TradeDirection.SHORT, direction)
             assertEquals("ETH", symbol)
             assertEquals(1.5, quantity, 0.0)
             assertEquals(3_200.0, price, 0.0)
@@ -99,7 +101,7 @@ class PlaceOrderUseCaseTest {
 
     @Test
     fun `invoke sets status to FILLED regardless of side`() = runTest {
-        coEvery { tradeRepository.placeOrder(any()) } answers { Result.success(firstArg()) }
+        coEvery { tradeRepository.placeOrder(any(), any(), any()) } answers { Result.success(firstArg()) }
 
         val buyResult = useCase(OrderSide.BUY, "BTC", 0.1, 60_000.0)
         val sellResult = useCase(OrderSide.SELL, "BTC", 0.1, 60_000.0)
@@ -111,7 +113,7 @@ class PlaceOrderUseCaseTest {
     @Test
     fun `invoke totalValue equals quantity times price`() = runTest {
         val orderSlot = slot<Order>()
-        coEvery { tradeRepository.placeOrder(capture(orderSlot)) } answers { Result.success(firstArg()) }
+        coEvery { tradeRepository.placeOrder(capture(orderSlot), any(), any()) } answers { Result.success(firstArg()) }
 
         useCase(OrderSide.BUY, "BTC", 0.25, 48_000.0)
 
@@ -120,7 +122,7 @@ class PlaceOrderUseCaseTest {
 
     @Test
     fun `invoke wraps repository exception in Result failure`() = runTest {
-        coEvery { tradeRepository.placeOrder(any()) } throws RuntimeException("Unexpected")
+        coEvery { tradeRepository.placeOrder(any(), any(), any()) } throws RuntimeException("Unexpected")
 
         val result = useCase(OrderSide.BUY, "BTC", 0.1, 60_000.0)
 

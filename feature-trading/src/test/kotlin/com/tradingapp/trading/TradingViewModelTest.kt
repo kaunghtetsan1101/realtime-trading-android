@@ -42,6 +42,7 @@ class TradingViewModelTest {
     private val getAssetDetail: GetAssetDetailUseCase = mockk()
     private val observePriceTicks: ObservePriceTicksUseCase = mockk()
     private val validateOrder: ValidateOrderUseCase = mockk()
+    private val validateTpSl: com.tradingapp.domain.usecase.ValidateTakeProfitStopLossUseCase = mockk()
     private val placeOrder: PlaceOrderUseCase = mockk()
     private val tradeRepository: TradeRepository = mockk()
     private val observeNetworkStatus: ObserveNetworkStatusUseCase = mockk()
@@ -59,6 +60,7 @@ class TradingViewModelTest {
             getAssetDetail = getAssetDetail,
             observePriceTicks = observePriceTicks,
             validateOrder = validateOrder,
+            validateTpSl = validateTpSl,
             placeOrder = placeOrder,
             tradeRepository = tradeRepository,
             observeNetworkStatus = observeNetworkStatus,
@@ -68,6 +70,7 @@ class TradingViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        every { validateTpSl(any(), any(), any(), any()) } returns ValidationResult.Valid
     }
 
     @After
@@ -127,6 +130,7 @@ class TradingViewModelTest {
             getAssetDetail = getAssetDetail,
             observePriceTicks = observePriceTicks,
             validateOrder = validateOrder,
+            validateTpSl = validateTpSl,
             placeOrder = placeOrder,
             tradeRepository = tradeRepository,
             observeNetworkStatus = observeNetworkStatus,
@@ -171,14 +175,15 @@ class TradingViewModelTest {
         every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
         every { observeNetworkStatus() } returns flowOf(true)
 
-        val fakeOrder = Order("1", "BTC", OrderSide.BUY, 0.1, 60_000.0, 6_000.0, OrderStatus.FILLED, 0L)
-        coEvery { placeOrder(any(), any(), any(), any()) } returns kotlin.Result.success(fakeOrder)
+        val fakeOrder = Order("1", "BTC", OrderSide.BUY, com.tradingapp.domain.model.TradeDirection.LONG, 0.1, 60_000.0, 6_000.0, OrderStatus.FILLED, 0L)
+        coEvery { placeOrder(any(), any(), any(), any(), any(), any()) } returns kotlin.Result.success(fakeOrder)
 
         val vm = TradingViewModel(
             symbol = "BTC",
             getAssetDetail = getAssetDetail,
             observePriceTicks = observePriceTicks,
             validateOrder = validateOrder,
+            validateTpSl = validateTpSl,
             placeOrder = placeOrder,
             tradeRepository = tradeRepository,
             observeNetworkStatus = observeNetworkStatus,
@@ -210,7 +215,7 @@ class TradingViewModelTest {
         every { tradeRepository.observePosition(any()) } returns flowOf(null)
         every { validateOrder(any(), any(), any(), any(), any()) } returns ValidationResult.Valid
         every { observeNetworkStatus() } returns flowOf(true)
-        coEvery { placeOrder(any(), any(), any(), any()) } returns
+        coEvery { placeOrder(any(), any(), any(), any(), any(), any()) } returns
             kotlin.Result.failure(RuntimeException("Insufficient funds"))
 
         val vm = TradingViewModel(
@@ -218,6 +223,7 @@ class TradingViewModelTest {
             getAssetDetail = getAssetDetail,
             observePriceTicks = observePriceTicks,
             validateOrder = validateOrder,
+            validateTpSl = validateTpSl,
             placeOrder = placeOrder,
             tradeRepository = tradeRepository,
             observeNetworkStatus = observeNetworkStatus,
@@ -267,6 +273,7 @@ class TradingViewModelTest {
             getAssetDetail = getAssetDetail,
             observePriceTicks = observePriceTicks,
             validateOrder = validateOrder,
+            validateTpSl = validateTpSl,
             placeOrder = placeOrder,
             tradeRepository = tradeRepository,
             observeNetworkStatus = observeNetworkStatus,
@@ -295,6 +302,7 @@ class TradingViewModelTest {
             getAssetDetail = getAssetDetail,
             observePriceTicks = observePriceTicks,
             validateOrder = validateOrder,
+            validateTpSl = validateTpSl,
             placeOrder = placeOrder,
             tradeRepository = tradeRepository,
             observeNetworkStatus = observeNetworkStatus,
@@ -321,6 +329,7 @@ class TradingViewModelTest {
             getAssetDetail = getAssetDetail,
             observePriceTicks = observePriceTicks,
             validateOrder = validateOrder,
+            validateTpSl = validateTpSl,
             placeOrder = placeOrder,
             tradeRepository = tradeRepository,
             observeNetworkStatus = observeNetworkStatus,
@@ -336,7 +345,7 @@ class TradingViewModelTest {
 
     @Test
     fun `QuickFillSelected MAX fills all available position for SELL`() = runTest {
-        val position = com.tradingapp.domain.model.Position("BTC", 2.0, 50_000.0)
+        val position = com.tradingapp.domain.model.Position("p1", "BTC", com.tradingapp.domain.model.TradeDirection.LONG, 2.0, 50_000.0)
         every { getAssetDetail(any()) } returns flowOf(Result.Success(fakeAsset(price = 60_000.0)))
         every { observePriceTicks(any()) } returns emptyFlow()
         every { tradeRepository.observeCashBalance() } returns flowOf(1_000.0)
@@ -349,6 +358,7 @@ class TradingViewModelTest {
             getAssetDetail = getAssetDetail,
             observePriceTicks = observePriceTicks,
             validateOrder = validateOrder,
+            validateTpSl = validateTpSl,
             placeOrder = placeOrder,
             tradeRepository = tradeRepository,
             observeNetworkStatus = observeNetworkStatus,
@@ -400,6 +410,7 @@ class TradingViewModelTest {
             getAssetDetail = getAssetDetail,
             observePriceTicks = observePriceTicks,
             validateOrder = validateOrder,
+            validateTpSl = validateTpSl,
             placeOrder = placeOrder,
             tradeRepository = tradeRepository,
             observeNetworkStatus = observeNetworkStatus,

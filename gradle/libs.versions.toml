@@ -1,7 +1,5 @@
 [versions]
 agp                 = "9.2.1"
-benchmarkMacroJunit4 = "1.5.0-alpha06"
-junit = "1.3.0"
 kotlin              = "2.4.0"
 ksp                 = "2.3.4"
 
@@ -11,7 +9,7 @@ targetSdk           = "36"
 
 # AndroidX Core
 coreKtx             = "1.19.0"
-lifecycleRuntime    = "2.10.0"
+lifecycle           = "2.10.0"
 activityCompose     = "1.13.0"
 
 # Compose
@@ -19,7 +17,6 @@ composeBom          = "2026.05.01"
 
 # Navigation 3
 nav3                          = "1.1.2"
-lifecycleViewmodelNav3        = "2.10.0"
 
 # Hilt
 hilt                          = "2.59.2"
@@ -67,7 +64,7 @@ mockk               = "1.14.11"
 [libraries]
 # Build-logic classpath (used in build-logic/convention/build.gradle.kts)
 android-gradle-plugin          = { group = "com.android.tools.build",   name = "gradle",                         version.ref = "agp" }
-androidx-benchmark-macro-junit4-v150alpha06 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmarkMacroJunit4" }
+androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "androidxMacroBenchmark" }
 kotlin-gradle-plugin           = { group = "org.jetbrains.kotlin",      name = "kotlin-gradle-plugin",           version.ref = "kotlin" }
 
 # JSR-330 (javax.inject) — for @Inject in domain layer without Hilt
@@ -75,7 +72,7 @@ javax-inject                   = { group = "javax.inject",              name = "
 
 # AndroidX
 androidx-core-ktx              = { group = "androidx.core",           name = "core-ktx",                       version.ref = "coreKtx" }
-androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle",      name = "lifecycle-runtime-ktx",          version.ref = "lifecycleRuntime" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle",      name = "lifecycle-runtime-ktx",          version.ref = "lifecycle" }
 androidx-activity-compose      = { group = "androidx.activity",       name = "activity-compose",               version.ref = "activityCompose" }
 
 # Compose BOM + core libraries
@@ -92,7 +89,7 @@ compose-material-icons-extended = { group = "androidx.compose.material", name = 
 # Navigation 3
 navigation3-runtime            = { group = "androidx.navigation3",    name = "navigation3-runtime",            version.ref = "nav3" }
 navigation3-ui                 = { group = "androidx.navigation3",    name = "navigation3-ui",                 version.ref = "nav3" }
-lifecycle-viewmodel-nav3       = { group = "androidx.lifecycle",      name = "lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewmodelNav3" }
+lifecycle-viewmodel-nav3       = { group = "androidx.lifecycle",      name = "lifecycle-viewmodel-navigation3", version.ref = "lifecycle" }
 
 # Hilt
 hilt-android                   = { group = "com.google.dagger",       name = "hilt-android",                   version.ref = "hilt" }

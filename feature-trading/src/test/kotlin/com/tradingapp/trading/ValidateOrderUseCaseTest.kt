@@ -73,28 +73,28 @@ class ValidateOrderUseCaseTest {
 
     @Test
     fun `SELL more than held position returns INSUFFICIENT_POSITION`() {
-        val position = Position("BTC", quantity = 0.5, averagePrice = 60_000.0)
+        val position = Position("p1", "BTC", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 0.5, averagePrice = 60_000.0)
         val result = useCase(OrderSide.SELL, "1.0", 60_000.0, 0.0, position)
         assertEquals(ValidationResult.Invalid(ValidationError.INSUFFICIENT_POSITION), result)
     }
 
     @Test
     fun `SELL exact held amount is Valid`() {
-        val position = Position("BTC", quantity = 1.0, averagePrice = 60_000.0)
+        val position = Position("p2", "BTC", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 1.0, averagePrice = 60_000.0)
         val result = useCase(OrderSide.SELL, "1.0", 60_000.0, 0.0, position)
         assertEquals(ValidationResult.Valid, result)
     }
 
     @Test
     fun `SELL partial amount is Valid`() {
-        val position = Position("BTC", quantity = 2.0, averagePrice = 60_000.0)
+        val position = Position("p3", "BTC", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 2.0, averagePrice = 60_000.0)
         val result = useCase(OrderSide.SELL, "0.5", 60_000.0, 0.0, position)
         assertEquals(ValidationResult.Valid, result)
     }
 
     @Test
     fun `SELL with blank quantity returns EMPTY_QUANTITY`() {
-        val position = Position("BTC", quantity = 1.0, averagePrice = 60_000.0)
+        val position = Position("p2", "BTC", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 1.0, averagePrice = 60_000.0)
         val result = useCase(OrderSide.SELL, "", 60_000.0, 0.0, position)
         assertEquals(ValidationResult.Invalid(ValidationError.EMPTY_QUANTITY), result)
     }

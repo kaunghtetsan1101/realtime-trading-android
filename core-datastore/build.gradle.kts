@@ -8,6 +8,6 @@ android {
 }
 
 dependencies {
-    implementation(libs.findLibrary("androidx-datastore-preferences").get())
-    implementation(libs.findLibrary("coroutines-core").get())
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.coroutines.core)
 }

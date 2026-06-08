@@ -158,6 +158,16 @@ private fun TradingBody(state: TradingState, onEvent: (TradingEvent) -> Unit, mo
 
         QuickFillRow(onFill = { fraction -> onEvent(TradingEvent.QuickFillSelected(fraction)) })
 
+        RiskManagementSection(
+            selectedSide = state.selectedSide,
+            takeProfitInput = state.takeProfitInput,
+            stopLossInput = state.stopLossInput,
+            takeProfitError = state.takeProfitError,
+            stopLossError = state.stopLossError,
+            onTakeProfitChange = { onEvent(TradingEvent.TakeProfitChanged(it)) },
+            onStopLossChange = { onEvent(TradingEvent.StopLossChanged(it)) },
+        )
+
         if (isQuantityValid) {
             OrderSummaryCard(
                 side = state.selectedSide,
@@ -165,6 +175,8 @@ private fun TradingBody(state: TradingState, onEvent: (TradingEvent) -> Unit, mo
                 price = state.currentPrice,
                 total = orderTotal,
                 symbol = state.symbol,
+                takeProfit = state.takeProfitInput.toDoubleOrNull(),
+                stopLoss = state.stopLossInput.toDoubleOrNull(),
             )
         }
 
@@ -289,7 +301,59 @@ private fun QuickFillRow(onFill: (Double) -> Unit) {
 }
 
 @Composable
-private fun OrderSummaryCard(side: OrderSide, quantity: Double, price: Double, total: Double, symbol: String) {
+private fun RiskManagementSection(
+    selectedSide: OrderSide,
+    takeProfitInput: String,
+    stopLossInput: String,
+    takeProfitError: ValidationError?,
+    stopLossError: ValidationError?,
+    onTakeProfitChange: (String) -> Unit,
+    onStopLossChange: (String) -> Unit,
+) {
+    val tpHint = if (selectedSide == OrderSide.BUY) "above entry price" else "below entry price"
+    val slHint = if (selectedSide == OrderSide.BUY) "below entry price" else "above entry price"
+
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Text(
+            "Risk Management (optional)",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedTextField(
+            value = takeProfitInput,
+            onValueChange = onTakeProfitChange,
+            label = { Text("Take Profit") },
+            placeholder = { Text(tpHint) },
+            isError = takeProfitError != null,
+            supportingText = takeProfitError?.let { { Text(it.toMessage(), color = MaterialTheme.colorScheme.error) } },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = stopLossInput,
+            onValueChange = onStopLossChange,
+            label = { Text("Stop Loss") },
+            placeholder = { Text(slHint) },
+            isError = stopLossError != null,
+            supportingText = stopLossError?.let { { Text(it.toMessage(), color = MaterialTheme.colorScheme.error) } },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun OrderSummaryCard(
+    side: OrderSide,
+    quantity: Double,
+    price: Double,
+    total: Double,
+    symbol: String,
+    takeProfit: Double? = null,
+    stopLoss: Double? = null,
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = Modifier.fillMaxWidth(),
@@ -308,6 +372,8 @@ private fun OrderSummaryCard(side: OrderSide, quantity: Double, price: Double, t
             SummaryRow("Quantity", "${TradingViewModel.formatQuantity(quantity)} $symbol")
             SummaryRow("Price", formatUsd(price))
             SummaryRow("Total", formatUsd(total))
+            if (takeProfit != null) SummaryRow("Take Profit", formatUsd(takeProfit))
+            if (stopLoss != null) SummaryRow("Stop Loss", formatUsd(stopLoss))
         }
     }
 }
@@ -347,6 +413,8 @@ private fun OrderConfirmationSheet(state: TradingState, onEvent: (TradingEvent) 
         SummaryRow("Quantity", "${TradingViewModel.formatQuantity(quantity)} ${state.symbol}")
         SummaryRow("Execution price", "${formatUsd(state.currentPrice)} (market)")
         SummaryRow("Total", formatUsd(total))
+        state.takeProfitInput.toDoubleOrNull()?.let { SummaryRow("Take Profit", formatUsd(it)) }
+        state.stopLossInput.toDoubleOrNull()?.let { SummaryRow("Stop Loss", formatUsd(it)) }
 
         Spacer(Modifier.height(Spacing.md))
 
@@ -383,6 +451,13 @@ private fun ValidationError.toMessage(): String = when (this) {
     ValidationError.ZERO_QUANTITY -> "Quantity must be greater than 0"
     ValidationError.INSUFFICIENT_BALANCE -> "Insufficient cash balance"
     ValidationError.INSUFFICIENT_POSITION -> "Insufficient position"
+    ValidationError.INVALID_TAKE_PROFIT -> "Enter a valid take profit price"
+    ValidationError.INVALID_STOP_LOSS -> "Enter a valid stop loss price"
+    ValidationError.TAKE_PROFIT_MUST_BE_ABOVE_ENTRY -> "Take profit must be above entry price"
+    ValidationError.TAKE_PROFIT_MUST_BE_BELOW_ENTRY -> "Take profit must be below entry price"
+    ValidationError.STOP_LOSS_MUST_BE_BELOW_ENTRY -> "Stop loss must be below entry price"
+    ValidationError.STOP_LOSS_MUST_BE_ABOVE_ENTRY -> "Stop loss must be above entry price"
+    ValidationError.TAKE_PROFIT_EQUALS_STOP_LOSS -> "Take profit and stop loss cannot be equal"
 }
 
 private fun formatUsd(amount: Double): String = "${"$"}${"%.2f".format(amount)}"
@@ -421,7 +496,7 @@ private fun TradingSellPreview() {
                 assetName = "Ethereum",
                 currentPrice = 3_200.0,
                 cashBalance = 500.0,
-                existingPosition = Position("ETH", 1.5, 2_800.0),
+                existingPosition = Position("pos-1", "ETH", com.tradingapp.domain.model.TradeDirection.LONG, 1.5, 2_800.0),
                 selectedSide = OrderSide.SELL,
                 quantityInput = "0.5",
                 isLoading = false,

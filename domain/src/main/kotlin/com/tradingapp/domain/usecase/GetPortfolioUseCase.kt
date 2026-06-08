@@ -20,9 +20,12 @@ class GetPortfolioUseCase @Inject constructor(
         val enrichedPositions = positions.map { position ->
             val livePrice = priceMap[position.symbol] ?: position.averagePrice
             val totalValue = position.quantity * livePrice
-            val unrealizedPnL = (livePrice - position.averagePrice) * position.quantity
+            val unrealizedPnL = when (position.direction) {
+                com.tradingapp.domain.model.TradeDirection.LONG -> (livePrice - position.averagePrice) * position.quantity
+                com.tradingapp.domain.model.TradeDirection.SHORT -> (position.averagePrice - livePrice) * position.quantity
+            }
             val unrealizedPnLPct = if (position.averagePrice > 0.0) {
-                (livePrice - position.averagePrice) / position.averagePrice * 100.0
+                unrealizedPnL / (position.averagePrice * position.quantity) * 100.0
             } else {
                 0.0
             }

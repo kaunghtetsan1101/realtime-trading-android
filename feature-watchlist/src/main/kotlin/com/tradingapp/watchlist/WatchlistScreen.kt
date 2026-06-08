@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,7 +39,6 @@ import com.tradingapp.ui.theme.TradingAppTheme
 fun WatchlistScreen(
     onAssetClick: (String) -> Unit,
     onSearchClick: () -> Unit,
-    onPortfolioClick: () -> Unit,
     onSettingsClick: () -> Unit,
     viewModel: WatchlistViewModel = hiltViewModel(),
 ) {
@@ -61,7 +59,6 @@ fun WatchlistScreen(
         snackbarHost = snackbarHost,
         onEvent = viewModel::onEvent,
         onSearchClick = onSearchClick,
-        onPortfolioClick = onPortfolioClick,
         onSettingsClick = onSettingsClick,
     )
 }
@@ -73,7 +70,6 @@ private fun WatchlistContent(
     snackbarHost: SnackbarHostState,
     onEvent: (WatchlistEvent) -> Unit,
     onSearchClick: () -> Unit,
-    onPortfolioClick: () -> Unit,
     onSettingsClick: () -> Unit,
 ) {
     Scaffold(
@@ -82,9 +78,6 @@ private fun WatchlistContent(
                 TopAppBar(
                     title = { Text("Market Watch", fontWeight = FontWeight.SemiBold) },
                     actions = {
-                        IconButton(onClick = onPortfolioClick) {
-                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = "Open portfolio")
-                        }
                         IconButton(onClick = onSearchClick) {
                             Icon(Icons.Default.Search, contentDescription = "Search markets")
                         }
@@ -172,7 +165,6 @@ private fun WatchlistPreview() {
             snackbarHost = remember { SnackbarHostState() },
             onEvent = {},
             onSearchClick = {},
-            onPortfolioClick = {},
             onSettingsClick = {},
         )
     }
@@ -182,7 +174,7 @@ private fun WatchlistPreview() {
 @Composable
 private fun WatchlistLoadingPreview() {
     TradingAppTheme {
-        WatchlistContent(WatchlistState(), remember { SnackbarHostState() }, {}, {}, {}, {})
+        WatchlistContent(WatchlistState(), remember { SnackbarHostState() }, {}, {}, {})
     }
 }
 
@@ -193,7 +185,6 @@ private fun WatchlistErrorPreview() {
         WatchlistContent(
             WatchlistState(isLoading = false, error = "No internet connection. Showing cached data."),
             remember { SnackbarHostState() },
-            {},
             {},
             {},
             {},

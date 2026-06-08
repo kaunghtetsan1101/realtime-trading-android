@@ -50,7 +50,7 @@ class GetPortfolioUseCaseTest {
     @Test
     fun `position with higher live price shows positive unrealised PnL`() = runTest {
         every { tradeRepository.observePositions() } returns flowOf(
-            listOf(Position("BTC", quantity = 1.0, averagePrice = 50_000.0)),
+            listOf(Position("p1", "BTC", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 1.0, averagePrice = 50_000.0)),
         )
         every { assetRepository.observeAssets() } returns flowOf(
             listOf(fakeAsset("BTC", price = 60_000.0)),
@@ -71,7 +71,7 @@ class GetPortfolioUseCaseTest {
     @Test
     fun `position with lower live price shows negative unrealised PnL`() = runTest {
         every { tradeRepository.observePositions() } returns flowOf(
-            listOf(Position("ETH", quantity = 2.0, averagePrice = 3_000.0)),
+            listOf(Position("p2", "ETH", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 2.0, averagePrice = 3_000.0)),
         )
         every { assetRepository.observeAssets() } returns flowOf(
             listOf(fakeAsset("ETH", price = 2_500.0)),
@@ -90,7 +90,7 @@ class GetPortfolioUseCaseTest {
     @Test
     fun `missing live price falls back to average price giving zero PnL`() = runTest {
         every { tradeRepository.observePositions() } returns flowOf(
-            listOf(Position("SOL", quantity = 10.0, averagePrice = 100.0)),
+            listOf(Position("p3", "SOL", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 10.0, averagePrice = 100.0)),
         )
         every { assetRepository.observeAssets() } returns flowOf(emptyList()) // no live price
         every { tradeRepository.observeCashBalance() } returns flowOf(0.0)
@@ -109,8 +109,8 @@ class GetPortfolioUseCaseTest {
     fun `total value equals cashBalance plus all position values`() = runTest {
         every { tradeRepository.observePositions() } returns flowOf(
             listOf(
-                Position("BTC", quantity = 0.5, averagePrice = 50_000.0),
-                Position("ETH", quantity = 2.0, averagePrice = 2_000.0),
+                Position("p4", "BTC", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 0.5, averagePrice = 50_000.0),
+                Position("p5", "ETH", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 2.0, averagePrice = 2_000.0),
             ),
         )
         every { assetRepository.observeAssets() } returns flowOf(
@@ -132,8 +132,8 @@ class GetPortfolioUseCaseTest {
     fun `total unrealised PnL aggregates across all positions`() = runTest {
         every { tradeRepository.observePositions() } returns flowOf(
             listOf(
-                Position("BTC", quantity = 1.0, averagePrice = 50_000.0),
-                Position("ETH", quantity = 1.0, averagePrice = 3_000.0),
+                Position("p1", "BTC", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 1.0, averagePrice = 50_000.0),
+                Position("p2", "ETH", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 1.0, averagePrice = 3_000.0),
             ),
         )
         every { assetRepository.observeAssets() } returns flowOf(
@@ -154,7 +154,7 @@ class GetPortfolioUseCaseTest {
     @Test
     fun `PnL percentage is zero when cost basis is zero`() = runTest {
         every { tradeRepository.observePositions() } returns flowOf(
-            listOf(Position("BTC", quantity = 1.0, averagePrice = 0.0)),
+            listOf(Position("p8", "BTC", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 1.0, averagePrice = 0.0)),
         )
         every { assetRepository.observeAssets() } returns flowOf(
             listOf(fakeAsset("BTC", price = 60_000.0)),
@@ -172,7 +172,7 @@ class GetPortfolioUseCaseTest {
     fun `new price emission triggers updated portfolio`() = runTest {
         val priceFlow = MutableStateFlow(listOf(fakeAsset("BTC", price = 50_000.0)))
         every { tradeRepository.observePositions() } returns flowOf(
-            listOf(Position("BTC", quantity = 1.0, averagePrice = 45_000.0)),
+            listOf(Position("p9", "BTC", com.tradingapp.domain.model.TradeDirection.LONG, quantity = 1.0, averagePrice = 45_000.0)),
         )
         every { assetRepository.observeAssets() } returns priceFlow
         every { tradeRepository.observeCashBalance() } returns flowOf(0.0)

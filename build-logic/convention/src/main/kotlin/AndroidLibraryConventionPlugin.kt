@@ -10,8 +10,8 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             // AGP 9.0 includes built-in Kotlin support — do not apply kotlin.android manually
             pluginManager.apply("com.android.library")
             extensions.configure<LibraryExtension> {
-                compileSdk = libs.findVersion("compileSdk").get().requiredVersion.toInt()
-                defaultConfig.minSdk = libs.findVersion("minSdk").get().requiredVersion.toInt()
+                compileSdk = catalog.findVersion("compileSdk").get().requiredVersion.toInt()
+                defaultConfig.minSdk = catalog.findVersion("minSdk").get().requiredVersion.toInt()
             }
             extensions.configure<KotlinAndroidProjectExtension> {
                 jvmToolchain(21)
