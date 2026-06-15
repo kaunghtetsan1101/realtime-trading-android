@@ -57,7 +57,7 @@ baseline-profile / macrobenchmark  → target :app (test-only modules)
 |-------|---------|----------------|
 | Presentation | `feature-*`, `core-navigation`, `app` | Compose UI, ViewModels, MVI contracts, navigation |
 | Domain | `domain` | Pure use cases, repository interfaces, domain models |
-| Data | `data`, `core-network`, `core-database` | Repository implementations, mappers, REST/WS, Room |
+| Data | `data`, `core-network`, `core-database` | Repository implementations, mappers, Binance REST/WS, CoinGecko REST, Room |
 | Infrastructure | `core-common`, `core-ui`, `core-designsystem`, `core-datastore` | Cross-cutting utilities, design tokens, preferences |
 
 ---
@@ -128,6 +128,63 @@ Design tokens and components are split across two modules:
 `MainActivity` reads `ThemeMode` from DataStore and passes the resolved dark/light flag into
 `TradingAppTheme`. Components use Material3 semantic colours (`onSurfaceVariant`, `PriceUp`,
 `PriceDown`) rather than hard-coded alpha values.
+
+---
+
+## Data Flow: Asset Metadata (CoinGecko)
+
+Price data and asset metadata are **separate pipelines**. Binance is the source of truth for
+market data; CoinGecko is the source of truth for display metadata (logo URLs and human-readable
+names). They never directly depend on each other.
+
+```
+App startup
+  │
+  ▼
+SyncAssetMetadataUseCase (appScope, IO dispatcher)
+  │
+  ▼
+AssetMetadataRepositoryImpl.syncIfStale()
+  ├── 1. provider.refresh()        — warm in-memory map from Room (handles cold starts)
+  ├── 2. check Room last_updated
+  │        └── stale (> 24h) or empty?
+  │              YES → CoinGeckoApi.getMarkets(?vs_currency=usd&per_page=250)
+  │                      │  List<CoinGeckoMarketDto> (symbol, name, image URL)
+  │                      ▼
+  │                    AssetMetadataMapper.toEntity()   symbol.uppercase() = bare symbol
+  │                      ▼
+  │                    AssetMetadataDao.upsertAll()     → Room  asset_metadata table
+  │                      ▼
+  │                    provider.refresh()               update AtomicReference<Map>
+  └── NO  → no-op (provider already warm from step 1)
+
+                                    ▼ (later, during Binance sync)
+Binance ticker DTO  BTCUSDT → strip USDT → BTC
+  │
+  ▼
+AssetMapper.toEntity(provider)
+  └── provider.getMetadata("BTC")  [sync, reads AtomicReference — no IO]
+        ├── found  → { displayName = "Bitcoin", imageUrl = "https://coin-images.coingecko.com/…" }
+        └── miss   → { displayName = "BTC",     imageUrl = null }
+  │
+  ▼
+AssetEntity persisted to Room (logo_url column filled from CoinGecko URL)
+  │
+  ▼
+UI: AssetRow / AssetIcon
+  ├── imageUrl != null → Coil loads CoinGecko URL → circular crop
+  └── imageUrl == null → initials avatar (deterministic colour from symbol hash)
+```
+
+**Offline behaviour:** Room always serves the last-synced metadata. The `RoomBackedAssetMetadataProvider`
+in-memory map is populated from Room on every cold start via `syncIfStale()`, so logos and names
+are available even with no network. If CoinGecko fails entirely, the app falls back to the symbol
+as the display name and shows an initials avatar for the icon.
+
+**CoinCap CDN fallback in `AssetIcon`:** For rows driven by `Position`/`Order` domain models
+(which carry only a symbol, not a full `Asset`), `AssetIcon` uses a CoinCap CDN URL pattern as a
+secondary fallback when no `imageUrl` is provided. This keeps portfolio and order history icons
+usable even before the first metadata sync completes.
 
 ---
 
@@ -222,6 +279,8 @@ All trading is client-side simulation — no broker API. State lives in Room:
 
 | Table | Purpose |
 |-------|---------|
+| `assets` | Price + market data synced from Binance (Room SSOT for all screens) |
+| `asset_metadata` | CoinGecko logos + display names, cached for 24 h (symbol PK) |
 | `wallet` | Single-row virtual cash balance (seeded $10 000) |
 | `positions` | Open positions with direction, avg cost, optional TP/SL |
 | `orders` | Placed and closed order history with realised P&L |
@@ -277,10 +336,11 @@ provided by an `app`-module Hilt binding because only `app` knows `BuildConfig.V
 | Layer | Tool | What is tested |
 |-------|------|----------------|
 | ViewModel | JUnit + MockK + Turbine | State transitions, effect delivery, debounce, offline flag |
-| Repository | JUnit + MockK + Turbine | Sync logic, WS tick routing, atomic order placement |
+| Repository | JUnit + MockK + Turbine | Sync logic, WS tick routing, atomic order placement, CoinGecko staleness |
 | Use cases | JUnit + MockK | Validation, P&L math, TP/SL monitoring, error wrapping |
 | HTTP parsing | MockWebServer + JUnit | Retrofit parameter encoding, Gson deserialization |
-| Mapper | JUnit | DTO → entity → domain field mapping |
+| Mapper | JUnit | DTO → entity → domain mapping; Binance symbol stripping (BTCUSDT → BTC) |
+| Metadata provider | JUnit + MockK | In-memory cache warm-up, fallback for unknown symbols |
 
 **Dispatcher injection:** `DispatcherProvider` is injected into ViewModels and repositories.
 Tests swap `Dispatchers.IO` and `Dispatchers.Main` for `UnconfinedTestDispatcher`, making all

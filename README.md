@@ -20,7 +20,8 @@ Native Android app for realtime market watching and simulated trading. Built as 
 | Architecture | MVI + Clean Architecture |
 | DI | Hilt |
 | Async | Coroutines + Flow / StateFlow |
-| Network | Retrofit + OkHttp + WebSocket |
+| Network | Retrofit + OkHttp + WebSocket (Binance) + CoinGecko REST |
+| Images | Coil 3 (async logo loading, circular crop, initials fallback) |
 | Persistence | Room + DataStore |
 | Build | Gradle 9.5 + AGP 9.2 + Convention Plugins + Version Catalog |
 | Testing | JUnit + MockK + Turbine + MockWebServer |
@@ -125,14 +126,16 @@ graph TD
     CUI --> CDSGN[core-designsystem]
 ```
 
-Live prices flow: Binance REST syncs assets into Room → WebSocket ticks update Room → UI observes DB.
+**Price data:** Binance REST syncs assets into Room → WebSocket ticks update Room → UI observes DB.
+
+**Asset metadata (logos + names):** CoinGecko REST fetches top-250 assets on startup → cached in Room → in-memory map updated → Binance assets enriched at sync time. Falls back to cached data offline; price pipeline is unaffected if CoinGecko is unreachable.
 
 ## Design System
 
 | Module | Contents |
 |--------|----------|
 | `core-designsystem` | `Color`, `Typography`, `Spacing`, `Shape` tokens |
-| `core-ui` | `TradingAppTheme`, `AssetRow`, `PriceText`, `PercentageBadge`, `OfflineBanner`, `ErrorState`, `EmptyState` |
+| `core-ui` | `TradingAppTheme`, `AssetIcon`, `AssetRow`, `PriceText`, `PercentageBadge`, `OfflineBanner`, `ErrorState`, `EmptyState` |
 
 Theme follows system by default; override in **Settings → Appearance** (persisted via DataStore).
 
@@ -228,6 +231,7 @@ Four parallel jobs on every push/PR to `main` (`.github/workflows/ci.yml`):
 | WebSocket cap | Top 50 of 100 assets get live ticks; ranks 51–100 show last-synced price |
 | No auth | No login or account system |
 | No charting | Detail screen shows recent ticks only, not candlesticks |
+| CoinGecko rate limit | Free tier (~30 req/min); one call per app start, 24h TTL — not a concern in practice |
 | Scroll benchmark | UiAutomator stale-node failure under realtime price updates |
 
 ## Future Improvements

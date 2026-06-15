@@ -104,7 +104,7 @@ private fun FavoritesContent(
             else -> FavoritesList(
                 assets = state.assets,
                 onEvent = onEvent,
-                modifier = Modifier.padding(padding),
+                modifier = Modifier.padding(top = padding.calculateTopPadding()),
             )
         }
     }
@@ -122,6 +122,7 @@ private fun FavoritesList(assets: List<Asset>, onEvent: (WatchlistEvent) -> Unit
                 isFavorite = asset.isFavorite,
                 onRowClick = { onEvent(WatchlistEvent.AssetClicked(asset.symbol)) },
                 onFavoriteClick = { onEvent(WatchlistEvent.ToggleFavorite(asset.symbol, !asset.isFavorite)) },
+                logoUrl = asset.logoUrl,
             )
             HorizontalDivider()
         }

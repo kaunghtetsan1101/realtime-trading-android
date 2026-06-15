@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
@@ -53,6 +54,7 @@ import com.tradingapp.domain.model.OrderStatus
 import com.tradingapp.domain.model.Portfolio
 import com.tradingapp.domain.model.Position
 import com.tradingapp.domain.model.TradeDirection
+import com.tradingapp.ui.components.AssetIcon
 import com.tradingapp.ui.components.EmptyState
 import com.tradingapp.ui.components.ErrorState
 import com.tradingapp.ui.components.LoadingIndicator
@@ -60,6 +62,7 @@ import com.tradingapp.ui.components.OfflineBanner
 import com.tradingapp.ui.components.PercentageBadge
 import com.tradingapp.ui.components.SectionHeader
 import com.tradingapp.ui.theme.TradingAppTheme
+import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -283,6 +286,7 @@ private fun PositionRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
+                AssetIcon(symbol = position.symbol, size = 32.dp)
                 Text(position.symbol, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text(
                     directionLabel,
@@ -427,6 +431,7 @@ private fun OrderHistoryRow(order: Order, modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                AssetIcon(symbol = order.symbol, size = 28.dp)
                 Text(
                     order.side.name,
                     style = MaterialTheme.typography.labelMedium,

@@ -53,6 +53,7 @@ import com.tradingapp.designsystem.Spacing
 import com.tradingapp.domain.model.OrderSide
 import com.tradingapp.domain.model.Position
 import com.tradingapp.domain.model.ValidationError
+import com.tradingapp.ui.components.AssetIcon
 import com.tradingapp.ui.components.ErrorState
 import com.tradingapp.ui.components.LoadingIndicator
 import com.tradingapp.ui.components.OfflineBanner
@@ -143,7 +144,7 @@ private fun TradingBody(state: TradingState, onEvent: (TradingEvent) -> Unit, mo
             .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        PriceHeader(price = state.currentPrice)
+        PriceHeader(symbol = state.symbol, price = state.currentPrice)
 
         TradeSideSelector(selected = state.selectedSide, onSelect = { onEvent(TradingEvent.SideSelected(it)) })
 
@@ -191,17 +192,23 @@ private fun TradingBody(state: TradingState, onEvent: (TradingEvent) -> Unit, mo
 }
 
 @Composable
-private fun PriceHeader(price: Double) {
+private fun PriceHeader(symbol: String, price: Double) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(
-            text = "Current Price",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            AssetIcon(symbol = symbol, size = 32.dp)
+            Text(
+                text = "Current Price",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Text(
             text = formatUsd(price),
             style = MaterialTheme.typography.titleLarge,

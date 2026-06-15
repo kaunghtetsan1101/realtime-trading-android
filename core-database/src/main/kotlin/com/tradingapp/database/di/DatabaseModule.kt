@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.tradingapp.database.TradingDatabase
 import com.tradingapp.database.dao.AssetDao
+import com.tradingapp.database.dao.AssetMetadataDao
 import com.tradingapp.database.dao.OrderDao
 import com.tradingapp.database.dao.PositionDao
 import com.tradingapp.database.dao.WalletDao
@@ -25,11 +26,19 @@ object DatabaseModule {
             TradingDatabase::class.java,
             "trading.db",
         )
-        .addMigrations(TradingDatabase.MIGRATION_1_2, TradingDatabase.MIGRATION_2_3, TradingDatabase.MIGRATION_3_4)
+        .addMigrations(
+            TradingDatabase.MIGRATION_1_2,
+            TradingDatabase.MIGRATION_2_3,
+            TradingDatabase.MIGRATION_3_4,
+            TradingDatabase.MIGRATION_4_5,
+        )
         .build()
 
     @Provides
     fun provideAssetDao(db: TradingDatabase): AssetDao = db.assetDao()
+
+    @Provides
+    fun provideAssetMetadataDao(db: TradingDatabase): AssetMetadataDao = db.assetMetadataDao()
 
     @Provides
     fun provideOrderDao(db: TradingDatabase): OrderDao = db.orderDao()

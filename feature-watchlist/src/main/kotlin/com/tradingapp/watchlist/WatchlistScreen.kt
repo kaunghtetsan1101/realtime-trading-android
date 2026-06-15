@@ -109,7 +109,9 @@ private fun WatchlistContent(
             else -> AssetList(
                 assets = state.assets,
                 onEvent = onEvent,
-                modifier = Modifier.padding(padding),
+                modifier = Modifier.fillMaxSize().padding(
+                    top = padding.calculateTopPadding()
+                ),
             )
         }
     }
@@ -127,6 +129,7 @@ private fun AssetList(assets: List<Asset>, onEvent: (WatchlistEvent) -> Unit, mo
                 isFavorite = asset.isFavorite,
                 onRowClick = { onEvent(WatchlistEvent.AssetClicked(asset.symbol)) },
                 onFavoriteClick = { onEvent(WatchlistEvent.ToggleFavorite(asset.symbol, !asset.isFavorite)) },
+                logoUrl = asset.logoUrl,
             )
             HorizontalDivider()
         }

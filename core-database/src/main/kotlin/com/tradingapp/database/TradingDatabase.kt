@@ -5,21 +5,30 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.tradingapp.database.dao.AssetDao
+import com.tradingapp.database.dao.AssetMetadataDao
 import com.tradingapp.database.dao.OrderDao
 import com.tradingapp.database.dao.PositionDao
 import com.tradingapp.database.dao.WalletDao
 import com.tradingapp.database.entity.AssetEntity
+import com.tradingapp.database.entity.AssetMetadataEntity
 import com.tradingapp.database.entity.OrderEntity
 import com.tradingapp.database.entity.PositionEntity
 import com.tradingapp.database.entity.WalletEntity
 
 @Database(
-    entities = [AssetEntity::class, OrderEntity::class, PositionEntity::class, WalletEntity::class],
-    version = 4,
+    entities = [
+        AssetEntity::class,
+        AssetMetadataEntity::class,
+        OrderEntity::class,
+        PositionEntity::class,
+        WalletEntity::class,
+    ],
+    version = 5,
     exportSchema = true,
 )
 abstract class TradingDatabase : RoomDatabase() {
     abstract fun assetDao(): AssetDao
+    abstract fun assetMetadataDao(): AssetMetadataDao
     abstract fun orderDao(): OrderDao
     abstract fun positionDao(): PositionDao
     abstract fun walletDao(): WalletDao
@@ -85,6 +94,22 @@ abstract class TradingDatabase : RoomDatabase() {
                     db.execSQL("ALTER TABLE orders ADD COLUMN closed_at INTEGER")
                     db.execSQL("ALTER TABLE orders ADD COLUMN close_reason TEXT")
                     db.execSQL("ALTER TABLE orders ADD COLUMN realized_pnl REAL")
+                }
+            }
+
+        val MIGRATION_4_5 =
+            object : Migration(4, 5) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS asset_metadata (
+                            base_symbol  TEXT PRIMARY KEY NOT NULL,
+                            display_name TEXT NOT NULL,
+                            image_url    TEXT,
+                            last_updated INTEGER NOT NULL
+                        )
+                        """.trimIndent(),
+                    )
                 }
             }
     }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.tradingapp.designsystem.Spacing
 import com.tradingapp.ui.theme.TradingAppTheme
 
@@ -42,6 +44,7 @@ fun AssetRow(
     onRowClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     modifier: Modifier = Modifier,
+    logoUrl: String? = null,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -51,8 +54,10 @@ fun AssetRow(
             .clickable(onClick = onRowClick)
             .padding(horizontal = Spacing.lg, vertical = Spacing.md),
     ) {
+        AssetIcon(symbol = symbol, imageUrl = logoUrl, size = 40.dp)
+
         // Symbol + name
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f).padding(start = Spacing.sm)) {
             Text(
                 text = symbol,
                 style = MaterialTheme.typography.titleMedium,

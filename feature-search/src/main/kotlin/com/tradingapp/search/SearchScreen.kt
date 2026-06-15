@@ -171,6 +171,7 @@ private fun SearchContent(
                             onFavoriteClick = {
                                 onEvent(SearchEvent.ToggleFavorite(asset.symbol, !asset.isFavorite))
                             },
+                            logoUrl = asset.logoUrl,
                         )
                         HorizontalDivider()
                     }

@@ -5,10 +5,13 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -35,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tradingapp.designsystem.Spacing
 import com.tradingapp.domain.model.Asset
+import com.tradingapp.ui.components.AssetIcon
 import com.tradingapp.ui.components.ErrorState
 import com.tradingapp.ui.components.LoadingIndicator
 import com.tradingapp.ui.components.OfflineBanner
@@ -72,13 +76,22 @@ fun MarketDetailScreen(
 @Composable
 private fun MarketDetailContent(state: MarketDetailState, onEvent: (MarketDetailEvent) -> Unit) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val title = state.asset?.let { "${it.symbol} / ${it.name}" } ?: "Detail"
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text(title, fontWeight = FontWeight.SemiBold) },
+                title = {
+                    if (state.asset != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            AssetIcon(symbol = state.asset.symbol, imageUrl = state.asset.logoUrl, size = 24.dp)
+                            Spacer(Modifier.width(Spacing.xs))
+                            Text("${state.asset.symbol} / ${state.asset.name}", fontWeight = FontWeight.SemiBold)
+                        }
+                    } else {
+                        Text("Detail", fontWeight = FontWeight.SemiBold)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { onEvent(MarketDetailEvent.NavigateBack) }) {
                         Icon(
@@ -124,21 +137,24 @@ private fun DetailBody(asset: Asset, isOffline: Boolean, modifier: Modifier = Mo
         // --- Price header ---
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         ) {
-            PriceText(
-                price = asset.currentPrice,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            PercentageBadge(
-                changePercent = asset.priceChangePct24h,
-                textStyle = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
+            AssetIcon(symbol = asset.symbol, imageUrl = asset.logoUrl, size = 48.dp)
+            Spacer(Modifier.width(Spacing.md))
+            Column(modifier = Modifier.weight(1f)) {
+                PriceText(
+                    price = asset.currentPrice,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                PercentageBadge(
+                    changePercent = asset.priceChangePct24h,
+                    textStyle = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
 
         // --- TradingView chart ---
