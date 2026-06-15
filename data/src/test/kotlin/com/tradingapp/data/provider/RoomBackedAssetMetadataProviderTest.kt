@@ -102,11 +102,10 @@ class RoomBackedAssetMetadataProviderTest {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private fun entity(symbol: String, displayName: String, imageUrl: String? = null) =
-        AssetMetadataEntity(
-            baseSymbol = symbol,
-            displayName = displayName,
-            imageUrl = imageUrl,
-            lastUpdated = 1_000L,
-        )
+    private fun entity(symbol: String, displayName: String, imageUrl: String? = null) = AssetMetadataEntity(
+        baseSymbol = symbol,
+        displayName = displayName,
+        imageUrl = imageUrl,
+        lastUpdated = 1_000L,
+    )
 }

@@ -18,6 +18,7 @@ import javax.inject.Inject
 class TradingApp : Application() {
 
     @Inject lateinit var prefsDataSource: AppPreferencesDataSource
+
     @Inject lateinit var syncAssetMetadata: SyncAssetMetadataUseCase
 
     // Survive the full app lifetime — not tied to any Activity or ViewModel scope.

@@ -3,10 +3,8 @@ package com.tradingapp.data.repository
 import com.tradingapp.common.dispatcher.DispatcherProvider
 import com.tradingapp.data.provider.RoomBackedAssetMetadataProvider
 import com.tradingapp.database.dao.AssetMetadataDao
-import com.tradingapp.database.entity.AssetMetadataEntity
 import com.tradingapp.network.api.CoinGeckoApi
 import com.tradingapp.network.model.CoinGeckoMarketDto
-import io.mockk.Ordering
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -17,6 +15,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AssetMetadataRepositoryImplTest {
@@ -35,7 +34,10 @@ class AssetMetadataRepositoryImplTest {
     private val provider = mockk<RoomBackedAssetMetadataProvider>(relaxed = true)
 
     private fun buildRepo() = AssetMetadataRepositoryImpl(
-        coinGeckoApi, metadataDao, provider, dispatchers,
+        coinGeckoApi,
+        metadataDao,
+        provider,
+        dispatchers,
     )
 
     // -------------------------------------------------------------------------
@@ -112,7 +114,7 @@ class AssetMetadataRepositoryImplTest {
     @Test
     fun `syncIfStale does not throw when CoinGecko request fails`() = runTest(testDispatcher) {
         coEvery { metadataDao.getLatestUpdateTime() } returns null
-        coEvery { coinGeckoApi.getMarkets() } throws RuntimeException("Network error")
+        coEvery { coinGeckoApi.getMarkets() } throws IOException("Network error")
         // Should complete without throwing
         buildRepo().syncIfStale()
     }
@@ -120,7 +122,7 @@ class AssetMetadataRepositoryImplTest {
     @Test
     fun `syncIfStale does not persist anything when CoinGecko fails`() = runTest(testDispatcher) {
         coEvery { metadataDao.getLatestUpdateTime() } returns null
-        coEvery { coinGeckoApi.getMarkets() } throws RuntimeException("Network error")
+        coEvery { coinGeckoApi.getMarkets() } throws IOException("Network error")
         buildRepo().syncIfStale()
         coVerify(exactly = 0) { metadataDao.upsertAll(any()) }
     }
@@ -128,7 +130,7 @@ class AssetMetadataRepositoryImplTest {
     @Test
     fun `syncIfStale still warms cache from Room when CoinGecko fails`() = runTest(testDispatcher) {
         coEvery { metadataDao.getLatestUpdateTime() } returns null
-        coEvery { coinGeckoApi.getMarkets() } throws RuntimeException("Network error")
+        coEvery { coinGeckoApi.getMarkets() } throws IOException("Network error")
         buildRepo().syncIfStale()
         // First refresh (warm from Room) must still happen even on CoinGecko failure
         coVerify(atLeast = 1) { provider.refresh() }

@@ -32,12 +32,7 @@ import com.tradingapp.ui.theme.TradingAppTheme
  * shift when the image arrives or fails.
  */
 @Composable
-fun AssetIcon(
-    symbol: String,
-    modifier: Modifier = Modifier,
-    imageUrl: String? = null,
-    size: Dp = 40.dp,
-) {
+fun AssetIcon(symbol: String, modifier: Modifier = Modifier, imageUrl: String? = null, size: Dp = 40.dp) {
     val url = imageUrl
         ?: "https://assets.coincap.io/assets/icons/${symbol.lowercase()}@2x.png"
 
@@ -54,11 +49,7 @@ fun AssetIcon(
 }
 
 @Composable
-private fun AssetInitialsIcon(
-    symbol: String,
-    size: Dp,
-    modifier: Modifier = Modifier,
-) {
+private fun AssetInitialsIcon(symbol: String, size: Dp, modifier: Modifier = Modifier) {
     val initial = symbol.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
     Box(
         modifier = modifier
@@ -77,6 +68,7 @@ private fun AssetInitialsIcon(
 }
 
 /** Stable, deterministic color derived from the symbol string. */
+@Suppress("MagicNumber")
 private fun symbolColor(symbol: String): Color {
     val palette = listOf(
         Color(0xFFE53935), // Red

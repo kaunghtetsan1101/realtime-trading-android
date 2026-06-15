@@ -21,7 +21,8 @@ import javax.inject.Singleton
 @Singleton
 class RoomBackedAssetMetadataProvider
 @Inject
-constructor(private val metadataDao: AssetMetadataDao) : AssetMetadataProvider {
+constructor(private val metadataDao: AssetMetadataDao) :
+    AssetMetadataProvider {
 
     private val snapshot = AtomicReference<Map<String, AssetMetadata>>(emptyMap())
 
@@ -30,10 +31,9 @@ constructor(private val metadataDao: AssetMetadataDao) : AssetMetadataProvider {
         snapshot.set(all.associate { it.baseSymbol to it.toDomain() })
     }
 
-    override fun getMetadata(baseSymbol: String): AssetMetadata =
-        snapshot.get()[baseSymbol] ?: AssetMetadata(
-            baseSymbol = baseSymbol,
-            displayName = baseSymbol,
-            imageUrl = null,
-        )
+    override fun getMetadata(baseSymbol: String): AssetMetadata = snapshot.get()[baseSymbol] ?: AssetMetadata(
+        baseSymbol = baseSymbol,
+        displayName = baseSymbol,
+        imageUrl = null,
+    )
 }

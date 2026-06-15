@@ -2,6 +2,7 @@ package com.tradingapp.data.repository
 
 import app.cash.turbine.test
 import com.tradingapp.common.dispatcher.DispatcherProvider
+import com.tradingapp.data.provider.StaticAssetMetadataProvider
 import com.tradingapp.database.dao.AssetDao
 import com.tradingapp.network.api.MarketApi
 import com.tradingapp.network.model.BinanceMiniTickerDto
@@ -48,7 +49,7 @@ class AssetRepositoryImplTest {
         every { assetDao.observeFavorites() } returns emptyFlow()
         // DB empty on first launch — repo falls back to BOOTSTRAP_SYMBOLS for initial WS URL.
         coEvery { assetDao.getTopSymbols(any()) } returns emptyList()
-        return AssetRepositoryImpl(assetDao, marketApi, webSocketManager, dispatchers)
+        return AssetRepositoryImpl(assetDao, marketApi, webSocketManager, dispatchers, StaticAssetMetadataProvider())
     }
 
     // -------------------------------------------------------------------------
@@ -199,7 +200,13 @@ class AssetRepositoryImplTest {
         every { assetDao.observeFavorites() } returns emptyFlow()
         coEvery { assetDao.getTopSymbols(any()) } returns emptyList()
 
-        val repo = AssetRepositoryImpl(assetDao, marketApi, webSocketManager, dispatchers)
+        val repo = AssetRepositoryImpl(
+            assetDao,
+            marketApi,
+            webSocketManager,
+            dispatchers,
+            StaticAssetMetadataProvider(),
+        )
 
         repo.observeAssets().test {
             val assets = awaitItem()

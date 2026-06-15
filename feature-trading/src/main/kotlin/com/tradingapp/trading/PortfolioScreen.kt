@@ -42,6 +42,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tradingapp.designsystem.PriceDown
@@ -62,7 +63,6 @@ import com.tradingapp.ui.components.OfflineBanner
 import com.tradingapp.ui.components.PercentageBadge
 import com.tradingapp.ui.components.SectionHeader
 import com.tradingapp.ui.theme.TradingAppTheme
-import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

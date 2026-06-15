@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,9 +40,12 @@ constructor(
             metadataDao.upsertAll(entities)
             provider.refresh()
             Timber.d("CoinGecko metadata synced — %d entries", entities.size)
-        } catch (e: Exception) {
-            // Price data from Binance is unaffected. Room data (possibly stale) remains available.
+        } catch (e: IOException) {
+            // Network failure — Room data (possibly stale) remains available.
             Timber.w(e, "CoinGecko sync failed — using cached metadata")
+        } catch (e: retrofit2.HttpException) {
+            // HTTP error (4xx/5xx) — treat the same as a network failure.
+            Timber.w(e, "CoinGecko sync failed with HTTP %d — using cached metadata", e.code())
         }
     }
 

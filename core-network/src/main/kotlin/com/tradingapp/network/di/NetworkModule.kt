@@ -74,10 +74,7 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("coingecko")
-    fun provideCoinGeckoRetrofit(
-        @Named("coingecko") okHttpClient: OkHttpClient,
-        gson: Gson,
-    ): Retrofit = Retrofit
+    fun provideCoinGeckoRetrofit(@Named("coingecko") okHttpClient: OkHttpClient, gson: Gson): Retrofit = Retrofit
         .Builder()
         .baseUrl(COINGECKO_BASE_URL)
         .client(okHttpClient)

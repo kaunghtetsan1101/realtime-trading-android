@@ -110,7 +110,7 @@ private fun WatchlistContent(
                 assets = state.assets,
                 onEvent = onEvent,
                 modifier = Modifier.fillMaxSize().padding(
-                    top = padding.calculateTopPadding()
+                    top = padding.calculateTopPadding(),
                 ),
             )
         }

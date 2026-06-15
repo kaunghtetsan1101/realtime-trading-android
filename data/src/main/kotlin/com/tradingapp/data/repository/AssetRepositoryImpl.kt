@@ -6,6 +6,7 @@ import com.tradingapp.data.mapper.toEntity
 import com.tradingapp.database.dao.AssetDao
 import com.tradingapp.domain.model.Asset
 import com.tradingapp.domain.model.PriceTick
+import com.tradingapp.domain.provider.AssetMetadataProvider
 import com.tradingapp.domain.repository.AssetRepository
 import com.tradingapp.network.api.MarketApi
 import com.tradingapp.network.model.PriceTickDto
@@ -55,6 +56,7 @@ class AssetRepositoryImpl @Inject constructor(
     private val marketApi: MarketApi,
     private val webSocketManager: WebSocketManager,
     private val dispatchers: DispatcherProvider,
+    private val metadataProvider: AssetMetadataProvider,
 ) : AssetRepository {
 
     private val priceTicksMutable = MutableSharedFlow<PriceTickDto>(
@@ -123,7 +125,7 @@ class AssetRepositoryImpl @Inject constructor(
 
             // Step 2: Fetch full 24h statistics (priceChange%, high, low, …) for those symbols.
             val symbolsJson = "[" + topSymbols.joinToString(",") { "\"$it\"" } + "]"
-            val entities = marketApi.get24hrTickers(symbolsJson).map { it.toEntity() }
+            val entities = marketApi.get24hrTickers(symbolsJson).map { it.toEntity(metadataProvider) }
 
             // Step 3: Two-step upsert — isFavorite is never touched.
             assetDao.insertAllIgnore(entities)
