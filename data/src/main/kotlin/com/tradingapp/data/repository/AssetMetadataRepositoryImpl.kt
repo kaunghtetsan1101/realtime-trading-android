@@ -11,6 +11,7 @@ import com.tradingapp.network.api.CoinGeckoApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
 import timber.log.Timber
 import java.io.IOException
 import javax.inject.Inject
@@ -43,7 +44,7 @@ constructor(
         } catch (e: IOException) {
             // Network failure — Room data (possibly stale) remains available.
             Timber.w(e, "CoinGecko sync failed — using cached metadata")
-        } catch (e: retrofit2.HttpException) {
+        } catch (e: HttpException) {
             // HTTP error (4xx/5xx) — treat the same as a network failure.
             Timber.w(e, "CoinGecko sync failed with HTTP %d — using cached metadata", e.code())
         }

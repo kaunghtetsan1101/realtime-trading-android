@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.min
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Single source of truth: Room DB.
@@ -95,7 +96,7 @@ class AssetRepositoryImpl @Inject constructor(
                                 (1L shl attempt.toInt().coerceAtMost(WS_BACKOFF_MAX_SHIFT)) * WS_BACKOFF_BASE_MS,
                                 WS_BACKOFF_MAX_MS,
                             )
-                            delay(backoffMs)
+                            delay(backoffMs.milliseconds)
                             true
                         }
                 }

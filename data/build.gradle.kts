@@ -12,6 +12,7 @@ dependencies {
     implementation(project(":core-network"))
     implementation(project(":core-database"))
     implementation(project(":domain"))
+    implementation(libs.retrofit)
     implementation(libs.coroutines.core)
     implementation(libs.timber)
     implementation(libs.room.ktx)
